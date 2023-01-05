@@ -3,6 +3,7 @@
 #include "core/module.h"
 #include "data/lrit_data.h"
 #include "common/lrit/lrit_file.h"
+#include "lrit_header.h"
 
 extern "C"
 {
@@ -54,6 +55,15 @@ namespace goes
             std::map<int, std::unique_ptr<wip_images>> all_wip_images;
 
             void processLRITFile(::lrit::LRITFile &file);
+
+            void process_data_IMAGE(::lrit::LRITFile &file, ::lrit::PrimaryHeader &primary_header, NOAALRITHeader &noaa_header);
+            void process_data_EMWIN(::lrit::LRITFile &file, ::lrit::PrimaryHeader &primary_header, NOAALRITHeader &noaa_header);
+            void process_data_MESSAGE(::lrit::LRITFile &file, ::lrit::PrimaryHeader &primary_header, NOAALRITHeader &noaa_header);
+            void process_data_DCS(::lrit::LRITFile &file, ::lrit::PrimaryHeader &primary_header, NOAALRITHeader &noaa_header);
+
+            std::string image_path_pattern;
+
+            void save_imagery_file(image::Image<uint8_t> &img, ImageInfo &info);
 
         public:
             GOESLRITDataDecoderModule(std::string input_file, std::string output_file_hint, nlohmann::json parameters);

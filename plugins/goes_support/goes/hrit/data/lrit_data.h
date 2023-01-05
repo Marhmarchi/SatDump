@@ -7,11 +7,23 @@
 #include <string>
 #include <map>
 #include <memory>
+#include <ctime>
 
 namespace goes
 {
     namespace hrit
     {
+        struct ImageInfo
+        {
+            bool is_sat = false;
+            std::string sat_name;
+            std::string sat_prefix;
+            std::string region;
+            std::string channel;
+            std::tm timestamp;
+            bool is_goesn = false;
+        };
+
         class SegmentedLRITImageDecoder
         {
         private:
@@ -27,7 +39,8 @@ namespace goes
             bool isComplete();
             image::Image<uint8_t> image;
             int image_id = -1;
-            std::string filename;
+
+            ImageInfo img_info;
         };
 
         enum lrit_image_status
@@ -41,7 +54,7 @@ namespace goes
         {
         private:
             image::Image<uint8_t> ch2_curve, fc_lut;
-            image::Image<uint8_t> ch2, ch13, falsecolor;
+            image::Image<uint8_t> ch2, ch13;
             time_t time2, time13;
 
             void generateCompo();
@@ -52,12 +65,12 @@ namespace goes
 
             bool hasData = false;
 
-            std::string filename;
-
-            void save(std::string directory);
+            ImageInfo img_info;
 
             void push2(image::Image<uint8_t> img, time_t time);
             void push13(image::Image<uint8_t> img, time_t time);
+
+            image::Image<uint8_t> falsecolor;
 
         public:
             // UI Stuff

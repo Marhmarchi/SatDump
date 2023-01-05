@@ -111,6 +111,8 @@ double avg_overflowless_timestamps(std::vector<T> const &v)
 
 std::vector<std::string> splitString(std::string input, char del);
 
+std::string replaceAllStrings(std::string main, const std::string search, const std::string replace);
+
 template <typename T>
 inline bool getBit(T &data, int &bit)
 {

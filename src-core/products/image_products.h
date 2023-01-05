@@ -186,7 +186,7 @@ namespace satdump
         double get_radiance_value(int image_index, int x, int y);
 
     public:
-        virtual void save(std::string directory);
+        virtual void save(std::string directory, bool save_imgs = true);
         virtual void load(std::string file);
     };
 

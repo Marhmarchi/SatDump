@@ -74,15 +74,5 @@ namespace goes
             if (time2 == time13)
                 generateCompo();
         }
-
-        void GOESRFalseColorComposer::save(std::string directory)
-        {
-            imageStatus = SAVING;
-            logger->info("Writing image " + directory + "/IMAGES/" + filename + ".png" + "...");
-            logger->warn("This false color LUT was made by Harry Dove-Robinson, see resources/goes/abi/wxstar/README.md for more infos.");
-            falsecolor.save_png(std::string(directory + "/IMAGES/" + filename + ".png").c_str());
-            hasData = false;
-            imageStatus = IDLE;
-        }
     }
 }

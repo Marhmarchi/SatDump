@@ -7,7 +7,7 @@
 
 namespace satdump
 {
-    void ImageProducts::save(std::string directory)
+    void ImageProducts::save(std::string directory, bool save_imgs)
     {
         type = "image";
         contents["has_timestamps"] = has_timestamps;
@@ -34,7 +34,7 @@ namespace satdump
             if (images[c].offset_x != 0)
                 contents["images"][c]["offset_x"] = images[c].offset_x;
 
-            if (!save_as_matrix)
+            if (!save_as_matrix && save_imgs)
             {
                 logger->info("Saving " + images[c].filename);
                 images[c].image.save_png(directory + "/" + images[c].filename);

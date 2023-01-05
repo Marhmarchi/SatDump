@@ -131,7 +131,8 @@
                     "write_emwin": true,
                     "write_messages": true,
                     "write_dcs": true,
-                    "write_unknown": false
+                    "write_unknown": false,
+                    "image_path_pattern": "{SATNAME}/{REGION}/{TIMESTAMP}"
                 }
             }
         }
@@ -387,7 +388,8 @@
                     "write_emwin": true,
                     "write_messages": true,
                     "write_dcs": true,
-                    "write_unknown": false
+                    "write_unknown": false,
+                    "image_path_pattern": "{SATNAME}/{REGION}/{TIMESTAMP}"
                 }
             }
         }

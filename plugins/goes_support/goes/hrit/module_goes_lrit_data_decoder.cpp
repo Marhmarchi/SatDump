@@ -17,7 +17,8 @@ namespace goes
                                                                                                                                                 write_emwin(parameters["write_emwin"].get<bool>()),
                                                                                                                                                 write_messages(parameters["write_messages"].get<bool>()),
                                                                                                                                                 write_dcs(parameters["write_dcs"].get<bool>()),
-                                                                                                                                                write_unknown(parameters["write_unknown"].get<bool>())
+                                                                                                                                                write_unknown(parameters["write_unknown"].get<bool>()),
+                                                                                                                                                image_path_pattern(parameters["image_path_pattern"].get<std::string>())
         {
             goes_r_fc_composer_full_disk = std::make_shared<GOESRFalseColorComposer>();
             goes_r_fc_composer_meso1 = std::make_shared<GOESRFalseColorComposer>();
@@ -186,17 +187,36 @@ namespace goes
             {
                 if (segmentedDecoder.second.image.size())
                 {
-                    logger->info("Writing image " + directory + "/IMAGES/" + segmentedDecoder.second.filename + ".png" + "...");
-                    segmentedDecoder.second.image.save_png(std::string(directory + "/IMAGES/" + segmentedDecoder.second.filename + ".png").c_str());
+                    // logger->info("Writing image " + directory + "/IMAGES/" + segmentedDecoder.second.filename + ".png" + "...");
+                    save_imagery_file(segmentedDecoder.second.image, segmentedDecoder.second.img_info);
+                    // segmentedDecoder.second.image.save_png(std::string(directory + "/IMAGES/" + segmentedDecoder.second.filename + ".png").c_str());
                 }
             }
 
             if (goes_r_fc_composer_full_disk->hasData)
-                goes_r_fc_composer_full_disk->save(directory);
+            {
+                goes_r_fc_composer_full_disk->imageStatus = SAVING;
+                save_imagery_file(goes_r_fc_composer_full_disk->falsecolor, goes_r_fc_composer_full_disk->img_info);
+                logger->warn("This false color LUT was made by Harry Dove-Robinson, see resources/goes/abi/wxstar/README.md for more infos.");
+                goes_r_fc_composer_full_disk->hasData = false;
+                goes_r_fc_composer_full_disk->imageStatus = IDLE;
+            }
             if (goes_r_fc_composer_meso1->hasData)
-                goes_r_fc_composer_meso1->save(directory);
+            {
+                goes_r_fc_composer_meso1->imageStatus = SAVING;
+                save_imagery_file(goes_r_fc_composer_meso1->falsecolor, goes_r_fc_composer_meso1->img_info);
+                logger->warn("This false color LUT was made by Harry Dove-Robinson, see resources/goes/abi/wxstar/README.md for more infos.");
+                goes_r_fc_composer_meso1->hasData = false;
+                goes_r_fc_composer_meso1->imageStatus = IDLE;
+            }
             if (goes_r_fc_composer_meso2->hasData)
-                goes_r_fc_composer_meso2->save(directory);
+            {
+                goes_r_fc_composer_meso2->imageStatus = SAVING;
+                save_imagery_file(goes_r_fc_composer_meso2->falsecolor, goes_r_fc_composer_meso2->img_info);
+                logger->warn("This false color LUT was made by Harry Dove-Robinson, see resources/goes/abi/wxstar/README.md for more infos.");
+                goes_r_fc_composer_meso2->hasData = false;
+                goes_r_fc_composer_meso2->imageStatus = IDLE;
+            }
         }
 
         void GOESLRITDataDecoderModule::drawUI(bool window)

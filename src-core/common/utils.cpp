@@ -38,6 +38,17 @@ std::vector<std::string> splitString(std::string input, char del)
     return segs;
 }
 
+std::string replaceAllStrings(std::string main, const std::string search, const std::string replace)
+{
+    size_t pos = 0;
+    while ((pos = main.find(search, pos)) != std::string::npos)
+    {
+        main.replace(pos, search.length(), replace);
+        pos += replace.length();
+    }
+    return main;
+}
+
 // Return filesize
 size_t getFilesize(std::string filepath)
 {
