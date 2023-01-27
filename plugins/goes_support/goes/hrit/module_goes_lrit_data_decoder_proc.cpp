@@ -47,7 +47,9 @@ namespace goes
             //////
 
 #if 0
+            try
             {
+                int channel = std::stoi(info.channel);
                 time_t timet = mktime_utc(&info.timestamp);
                 if (products_wip.count(info.sat_name) == 0)
                     products_wip.insert({info.sat_name, std::map<std::string, wip_products>()});
@@ -63,7 +65,7 @@ namespace goes
                         logger->critical("Saving products! " + info.sat_name + " " + info.region + " " + std::to_string(prods.has_channels.size()));
 
                         satdump::ImageProducts images_products;
-                        if (info.sat_name == "HIM")
+                        if (info.sat_name == "Himawari")
                             images_products.instrument_name = "ahi";
                         else
                             images_products.instrument_name = "abi";
@@ -81,14 +83,11 @@ namespace goes
                     prods = {{}, {}, timet, base_path};
                 }
 
-                try
-                {
-                    prods.has_channels.push_back(std::stoi(info.channel));
-                    prods.paths.push_back(file_name);
-                }
-                catch (std::exception &e)
-                {
-                }
+                prods.has_channels.push_back(channel);
+                prods.paths.push_back(file_name);
+            }
+            catch (std::exception &e)
+            {
             }
 #endif
         }
