@@ -149,3 +149,7 @@ std::vector<uint8_t> unsigned_to_bitvec(T v)
         c.push_back((v >> s) & 1);
     return c;
 }
+
+std::string loadFileToString(std::string path);
+std::string ws2s(const std::wstring &wstr);
+std::wstring s2ws(const std::string &str);

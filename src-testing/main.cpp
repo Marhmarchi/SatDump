@@ -12,11 +12,7 @@
 
 #include "logger.h"
 
-#include "common/cpu_features.h"
-
 int main(int /*argc*/, char *argv[])
 {
     initLogger();
-
-    cpu_features::print_features(cpu_features::get_cpu_features());
 }
