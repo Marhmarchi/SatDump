@@ -27,7 +27,7 @@
                 "type": "bool",
                 "value": false,
                 "name": "DC Blocking",
-                "description": "DC Blocking allows removing a DC Spike / Offset present on some SDR.\n A classic example would the HackRF which often has this sort of issues."
+                "description": "DC Blocking allows removing a DC Spike / Offset present on some SDRs.\n A classic example would be the HackRF which often has this sort of issue."
             },
             "iq_swap": {
                 "type": "bool",
@@ -180,6 +180,18 @@
             38337, // GCOM-W1
             43065 // GCOM-C1
         ]
+    },
+    // Advanced user settings
+    // Should NOT be touched by the average user
+    "advanced_settings": {
+        // DSP Buffer size. The default 1MB uses 
+        // too much RAM for operation on some SBCs
+        // with only 256MB or such.
+        // Changing this will drastically reduce
+        // RAM utilization, but be careful to NOT go
+        // too low or things will break!
+        // ------------------------------------------------------
+        // "default_buffer_size": 100e3
     },
     // Settings for the Viewer. Those also are default settings when generating viewer-less
     "viewer": {
@@ -530,6 +542,11 @@
                     "6 Equalized": {
                         "equation": "1 - ch6",
                         "equalize": true
+                    },
+                    "Day Microphysics": {
+                        "equation": "ch1, ch4^2.5, ch5",
+                        "equalize": true,
+                        "geo_correct": true
                     },
                     "654": {
                         "equation": "1 - ch6, 1 - ch5, 1 - ch4",

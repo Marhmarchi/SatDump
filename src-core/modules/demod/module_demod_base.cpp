@@ -17,7 +17,7 @@ namespace demod
         if (parameters.count("buffer_size") > 0)
             d_buffer_size = parameters["buffer_size"].get<long>();
         else
-            d_buffer_size = std::min<int>(STREAM_BUFFER_SIZE, std::max<int>(8192 + 1, d_samplerate / 200));
+            d_buffer_size = std::min<int>(dsp::STREAM_BUFFER_SIZE, std::max<int>(8192 + 1, d_samplerate / 200));
 
         if (parameters.count("symbolrate") > 0)
             d_symbolrate = parameters["symbolrate"].get<long>();
@@ -102,7 +102,7 @@ namespace demod
 
         // Init resampler if required
         if (resample && resample_here)
-            resampler = std::make_shared<dsp::RationalResamplerBlock<complex_t>>(input_data_final_fft, final_samplerate, d_samplerate);
+            resampler = std::make_shared<dsp::SmartResamplerBlock<complex_t>>(input_data_final_fft, final_samplerate, d_samplerate);
 
         // AGC
         agc = std::make_shared<dsp::AGCBlock<complex_t>>((resample && resample_here) ? resampler->output_stream : input_data_final_fft, d_agc_rate, 1.0f, 1.0f, 65536);
