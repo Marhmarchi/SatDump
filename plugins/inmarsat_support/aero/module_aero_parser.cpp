@@ -4,8 +4,9 @@
 #include <filesystem>
 #include "imgui/imgui.h"
 #include "common/utils.h"
-#include "pkt_structs.h"
-#include "acars_parser.h"
+#include "decode_utils.h"
+#include "common/dsp/io/wav_writer.h"
+#include "common/audio/audio_sink.h"
 
 #define SIGNAL_UNIT_SIZE_BYTES 12
 
@@ -17,6 +18,8 @@ namespace inmarsat
         {
             buffer = new uint8_t[SIGNAL_UNIT_SIZE_BYTES];
             memset(buffer, 0, SIGNAL_UNIT_SIZE_BYTES);
+
+            is_c_channel = parameters.contains("is_c") ? parameters["is_c"].get<bool>() : false;
 
             if (parameters.contains("udp_sinks"))
             {
@@ -114,6 +117,117 @@ namespace inmarsat
             }
         }
 
+        void AeroParserModule::process_pkt()
+        {
+            if (check_crc(buffer))
+            {
+                uint8_t pkt_id = buffer[0];
+                nlohmann::json final_pkt;
+
+                try
+                {
+                    switch (pkt_id)
+                    {
+                    case pkts::MessageAESSystemTableBroadcastIndex::MSG_ID:
+                        final_pkt = pkts::MessageAESSystemTableBroadcastIndex(buffer);
+                        break;
+
+                    case pkts::MessageUserDataISU::MSG_ID:
+                        wip_user_data.isu = pkts::MessageUserDataISU(buffer);
+                        wip_user_data.ssu.clear();
+                        has_wip_user_data = true;
+                        break;
+
+                    // Do NOTHING on Reserved
+                    case 0x26:
+                        break;
+
+                    // SSUs
+                    default:
+                        if ((pkt_id & 0xC0) == 0xC0)
+                        {
+                            if (has_wip_user_data)
+                            {
+                                auto ssu = pkts::MessageUserDataSSU(buffer);
+                                wip_user_data.ssu.push_back(ssu);
+
+                                if (ssu.seq_no == 0) // Process
+                                {
+                                    auto payload = wip_user_data.get_payload();
+
+                                    if (acars::is_acars_data(payload))
+                                    {
+                                        auto ac = acars_parser.parse(payload);
+                                        if (ac.has_value())
+                                        {
+                                            final_pkt = ac.value();
+                                            final_pkt["msg_name"] = "ACARS";
+                                            final_pkt["signal_unit"] = wip_user_data.isu;
+                                            auto libac = acars::parse_libacars(ac.value(), la_msg_dir::LA_MSG_DIR_GND2AIR);
+                                            if (!libac.empty())
+                                                final_pkt["libacars"] = libac;
+                                            // logger->critical(final_pkt["libacars"].dump(4));
+                                            logger->info("ACARS message ({:s}) : \n{:s}",
+                                                         final_pkt["plane_reg"].get<std::string>().c_str(),
+                                                         final_pkt["message"].get<std::string>().c_str());
+                                        }
+                                    }
+
+                                    has_wip_user_data = false;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            logger->debug(pkt_type_to_name(pkt_id));
+                        }
+                        break;
+                    }
+
+                    if (!final_pkt.contains("msg_name"))
+                    {
+                        std::string name = pkt_type_to_name(pkt_id);
+                        if (name.find("Reserved") == std::string::npos)
+                            final_pkt["msg_name"] = name;
+                        logger->info("Packet : " + name);
+                    }
+
+                    final_pkt["timestamp"] = time(0);
+
+                    if (is_gui)
+                    {
+                        if (final_pkt.contains("msg_name"))
+                        {
+                            pkt_history_mtx.lock();
+                            if (final_pkt["msg_name"].get<std::string>() == "ACARS")
+                            {
+                                pkt_history_acars.push_back(final_pkt);
+                                if (pkt_history_acars.size() > 200)
+                                    pkt_history_acars.erase(pkt_history_acars.begin());
+                            }
+                            else
+                            {
+                                pkt_history.push_back(final_pkt);
+                                if (pkt_history.size() > 200)
+                                    pkt_history.erase(pkt_history.begin());
+                            }
+                            pkt_history_mtx.unlock();
+                        }
+                    }
+
+                    process_final_pkt(final_pkt);
+                }
+                catch (std::exception &e)
+                {
+                    logger->error("Error processing Aero frames : {:s}", e.what());
+                }
+            }
+            else
+            {
+                logger->error("Invalid CRC!");
+            }
+        }
+
         void AeroParserModule::process()
         {
             if (input_data_type == DATA_FILE)
@@ -125,122 +239,71 @@ namespace inmarsat
 
             logger->info("Using input frames " + d_input_file);
 
-            bool has_wip_user_data = false;
-            pkts::MessageUserDataFinal wip_user_data;
+            uint8_t *voice_data = nullptr;
+            AmbeDecoder *ambed = nullptr;
+            int16_t *audio_out = nullptr;
+            std::ofstream *file_wav = nullptr;
+            dsp::WavWriter *wav_out = nullptr;
+            size_t final_wav_size = 0;
+            if (is_c_channel)
+            {
+                voice_data = new uint8_t[300];
+                ambed = new AmbeDecoder();
+                audio_out = new int16_t[160 * 25];
+                std::string directory = d_output_file_hint.substr(0, d_output_file_hint.rfind('/'));
+                file_wav = new std::ofstream(directory + "/audio.wav", std::ios::binary);
+                wav_out = new dsp::WavWriter(*file_wav);
+                wav_out->write_header(8000, 1);
+            }
 
-            acars::ACARSParser acars_parser;
+            std::shared_ptr<audio::AudioSink> audio_sink;
+            if (input_data_type != DATA_FILE && audio::has_sink() && is_c_channel)
+            {
+                enable_audio = true;
+                audio_sink = audio::get_default_sink();
+                audio_sink->set_samplerate(8000);
+                audio_sink->start();
+            }
 
             time_t lastTime = 0;
             while (input_data_type == DATA_FILE ? !data_in.eof() : input_active.load())
             {
-                // Read a buffer
-                if (input_data_type == DATA_FILE)
-                    data_in.read((char *)buffer, SIGNAL_UNIT_SIZE_BYTES);
-                else
-                    input_fifo->read((uint8_t *)buffer, SIGNAL_UNIT_SIZE_BYTES);
-
-                if (check_crc(buffer))
+                if (is_c_channel)
                 {
-                    uint8_t pkt_id = buffer[0];
-                    nlohmann::json final_pkt;
-
-                    try
+                    for (int i = 0; i < 3; i++)
                     {
-                        switch (pkt_id)
-                        {
-                        case pkts::MessageAESSystemTableBroadcastIndex::MSG_ID:
-                            final_pkt = pkts::MessageAESSystemTableBroadcastIndex(buffer);
-                            break;
+                        // Read a buffer
+                        if (input_data_type == DATA_FILE)
+                            data_in.read((char *)buffer, SIGNAL_UNIT_SIZE_BYTES);
+                        else
+                            input_fifo->read((uint8_t *)buffer, SIGNAL_UNIT_SIZE_BYTES);
 
-                        case pkts::MessageUserDataISU::MSG_ID:
-                            wip_user_data.isu = pkts::MessageUserDataISU(buffer);
-                            wip_user_data.ssu.clear();
-                            has_wip_user_data = true;
-                            break;
-
-                        // Do NOTHING on Reserved
-                        case 0x26:
-                            break;
-
-                        // SSUs
-                        default:
-                            if ((pkt_id & 0xC0) == 0xC0)
-                            {
-                                if (has_wip_user_data)
-                                {
-                                    auto ssu = pkts::MessageUserDataSSU(buffer);
-                                    wip_user_data.ssu.push_back(ssu);
-
-                                    if (ssu.seq_no == 0) // Process
-                                    {
-                                        auto payload = wip_user_data.get_payload();
-
-                                        if (acars::is_acars_data(payload))
-                                        {
-                                            auto ac = acars_parser.parse(payload);
-                                            if (ac.has_value())
-                                            {
-                                                final_pkt = ac.value();
-                                                final_pkt["msg_name"] = "ACARS";
-                                                final_pkt["signal_unit"] = wip_user_data.isu;
-                                                logger->info("ACARS message ({:s}) : \n {:s}",
-                                                             final_pkt["plane_reg"].get<std::string>().c_str(),
-                                                             final_pkt["message"].get<std::string>().c_str());
-                                            }
-                                        }
-
-                                        has_wip_user_data = false;
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                logger->debug(pkt_type_to_name(pkt_id));
-                            }
-                            break;
-                        }
-
-                        if (!final_pkt.contains("msg_name"))
-                        {
-                            std::string name = pkt_type_to_name(pkt_id);
-                            if (name.find("Reserved") == std::string::npos)
-                                final_pkt["msg_name"] = name;
-                            logger->info("Packet : " + name);
-                        }
-
-                        final_pkt["timestamp"] = time(0);
-
-                        if (is_gui)
-                        {
-                            if (final_pkt.contains("msg_name"))
-                            {
-                                pkt_history_mtx.lock();
-                                if (final_pkt["msg_name"].get<std::string>() == "ACARS")
-                                {
-                                    pkt_history_acars.push_back(final_pkt);
-                                    if (pkt_history_acars.size() > 200)
-                                        pkt_history_acars.erase(pkt_history_acars.begin());
-                                }
-                                else
-                                {
-                                    pkt_history.push_back(final_pkt);
-                                    if (pkt_history.size() > 200)
-                                        pkt_history.erase(pkt_history.begin());
-                                }
-                                pkt_history_mtx.unlock();
-                            }
-                        }
-
-                        process_final_pkt(final_pkt);
+                        process_pkt();
                     }
-                    catch (std::exception &e)
-                    {
-                        logger->error("Error processing Aero frames : {:s}", e.what());
-                    }
+
+                    // Read a buffer
+                    if (input_data_type == DATA_FILE)
+                        data_in.read((char *)voice_data, 300);
+                    else
+                        input_fifo->read((uint8_t *)voice_data, 300);
+
+                    ambed->decode(voice_data, 25, audio_out);
+
+                    file_wav->write((char *)audio_out, 320 * 25);
+                    final_wav_size += 320 * 25;
+
+                    if (enable_audio)
+                        audio_sink->push_samples(audio_out, 160 * 25);
                 }
                 else
                 {
-                    logger->error("Invalid CRC!");
+                    // Read a buffer
+                    if (input_data_type == DATA_FILE)
+                        data_in.read((char *)buffer, SIGNAL_UNIT_SIZE_BYTES);
+                    else
+                        input_fifo->read((uint8_t *)buffer, SIGNAL_UNIT_SIZE_BYTES);
+
+                    process_pkt();
                 }
 
                 if (input_data_type == DATA_FILE)
@@ -251,6 +314,20 @@ namespace inmarsat
                     lastTime = time(NULL);
                     logger->info("Progress " + std::to_string(round(((float)progress / (float)filesize) * 1000.0f) / 10.0f) + "%");
                 }
+            }
+
+            if (enable_audio)
+                audio_sink->stop();
+
+            if (is_c_channel)
+            {
+                delete[] voice_data;
+                delete ambed;
+                delete[] audio_out;
+                wav_out->finish_header(final_wav_size);
+                file_wav->close();
+                delete file_wav;
+                delete wav_out;
             }
 
             if (input_data_type == DATA_FILE)
@@ -266,6 +343,8 @@ namespace inmarsat
             ImGui::Text("Decoded packets can be seen in a floating window.");
             ImGui::Spacing();
             ImGui::TextColored(ImColor(255, 0, 0), "Note : Still WIP!");
+
+            ImGui::Text("Do remember you should not keep nor share data that is\nnot intended for you.");
 
             if (input_data_type == DATA_FILE)
                 ImGui::ProgressBar((float)progress / (float)filesize, ImVec2(ImGui::GetWindowWidth() - 10, 20 * ui_scale));
