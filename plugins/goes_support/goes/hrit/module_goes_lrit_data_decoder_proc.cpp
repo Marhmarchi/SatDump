@@ -11,7 +11,7 @@ namespace goes
 {
     namespace hrit
     {
-#if 0
+#if 1
         struct wip_products
         {
             std::vector<int> has_channels;
@@ -46,7 +46,7 @@ namespace goes
 
             //////
 
-#if 0
+#if 1
             try
             {
                 int channel = std::stoi(info.channel);
@@ -73,6 +73,20 @@ namespace goes
                         // images_products.timestamp_type = satdump::ImageProducts::TIMESTAMP_LINE;
                         // images_products.set_tle(satdump::general_tle_registry.get_from_norad(norad));
                         // images_products.set_timestamps(mtvza_reader.timestamps);
+                        images_products.has_timestamps = true;
+                        images_products.timestamp_type = satdump::ImageProducts::TIMESTAMP_LINE;
+                        images_products.set_timestamps(std::vector<double>(1));
+                        images_products.set_tle(satdump::general_tle_registry.get_from_norad(40069)); // 41866));
+                        nlohmann::json proj_idk;
+                        proj_idk["type"] = "geos";
+                        proj_idk["lon"] = -75;
+                        proj_idk["alt"] = 35786;
+                        proj_idk["scale_x"] = 1.174,
+                        proj_idk["scale_y"] = 1.173,
+                        proj_idk["offset_x"] = 0;
+                        proj_idk["offset_y"] = 0;
+                        proj_idk["sweep_x"] = true;
+                        images_products.set_proj_cfg(proj_idk);
 
                         for (int i = 0; i < prods.has_channels.size(); i++)
                             images_products.images.push_back({prods.paths[i], std::to_string(prods.has_channels[i]), image::Image<uint16_t>()});
