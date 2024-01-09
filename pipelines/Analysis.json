@@ -13,7 +13,7 @@
 			"cutoff_freq": {
 				"type": "double",
 				"value": 20e3,
-				"name": "Cutoff frequency";
+				"name": "Cutoff frequency",
 				"description": "Low pass filter cutoff frequency"
 			},
 			"transition_bw": {
