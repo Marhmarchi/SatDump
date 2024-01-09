@@ -4,7 +4,9 @@
 #include "common/dsp/utils/agc2.h"
 #include "common/utils.h"
 #include "core/module.h"
+#include "imgui/imgui_flags.h"
 #include "logger.h"
+#include "imgui/imgui.h"
 
 
 #include "common/dsp/filter/firdes.h"
@@ -76,29 +78,67 @@ namespace analysis_support
 
 		while (input_data_type == DATA_FILE ? !data_in.eof() : input_active.load())
 		{
+//
+//			if (input_data_type == DATA_FILE)
+//				data_in.read((char *)input_buffer, BUFFER_SIZE * sizeof(complex_t));
+//			else
+//				input_fifo->read((uint8_t *)input_buffer, BUFFER_SIZE * sizeof(complex_t));
+//
+//			int dat_size = lpf->output_stream->read();
+//
+//			if (dat_size <= 0)
+//			{
+//				lpf->output_stream->flush();
+//				continue;
+//			}
+//
+//
+//
 
-			if (input_data_type == DATA_FILE)
-				data_in.read((char *)input_buffer, BUFFER_SIZE * sizeof(complex_t));
-			else
-				input_fifo->read((uint8_t *)input_buffer, BUFFER_SIZE * sizeof(complex_t));
-
-			volk_32fc_x2_multiply_32fc((lv_32fc_t *)output_buffer, (lv_32fc_t *)input_buffer, (lv_32fc_t *)input_buffer, 8192);
+//			volk_32fc_x2_multiply_32fc((lv_32fc_t *)output_buffer, (lv_32fc_t *)input_buffer, (lv_32fc_t *)input_buffer, 8192);
 
 
-			if (input_data_type == DATA_FILE)
-				progress = data_in.tellg();
-			if (time(NULL) % 10 == 0 && lastTime != time(NULL))
-			{
-				lastTime = time(NULL);
-				logger->info("Progress " + std::to_string(round(((double)progress / (double)filesize) * 1000.0) / 10.0) + "%%");
-			}
+
+//
+//			if (input_data_type == DATA_FILE)
+//				progress = data_in.tellg();
+//			if (time(NULL) % 10 == 0 && lastTime != time(NULL))
+//			{
+//				lastTime = time(NULL);
+//				logger->info("Progress " + std::to_string(round(((double)progress / (double)filesize) * 1000.0) / 10.0) + "%%");
+//			}
 		}
+
+		//Stop everything
+		agc2->stop();
+		lpf->stop();
+		if (input_data_type == DATA_FILE)
+			data_in.close();
+
+
 	};
 
-
-			// Read a buffer
-			// if (input_data_type == DATA_FILE)
-			// data_in.read((char *)soft_buffer, BUFFER_SIZE * 2);
-			// else
+	void AnalysisWork::drawUI(bool window)
+	{
+		ImGui::Begin("Analysis Plugin (very vey WIP)", NULL, window ? 0 : NOWINDOW_FLAGS);
+		if (input_data_type == DATA_FILE)
+			ImGui::ProgressBar((double)progress / (double)filesize, ImVec2(ImGui::GetWindowWidth() - 10, 20 * ui_scale));
+		ImGui::End();
 	}
+
+	std::string AnalysisWork::getID()
+	{
+		return "analysis_plugin";
+	}
+
+	std::vector<std::string> AnalysisWork::getParameters()
+	{
+		return {};
+	}
+
+	std::shared_ptr<ProcessingModule> AnalysisWork::getInstance(std::string input_file, std::string output_file_hint, nlohmann::json parameters)
+	{
+		return std::make_shared<AnalysisWork>(input_file, output_file_hint, parameters);
+	}
+
 }
