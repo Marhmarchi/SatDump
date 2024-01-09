@@ -31,6 +31,9 @@ namespace analysis_support
 			std::ifstream data_in;
 			std::ofstream data_out;
 
+			complex_t *input_buffer;
+			complex_t *output_buffer;
+
 		public:
 			AnalysisWork(std::string input_file, std::string output_file_hint, nlohmann::json parameters);
 			~AnalysisWork();
