@@ -9,20 +9,6 @@
 			]
 		],
 		"frequencies": [],
-		"parameters": {
-		//	"cutoff_freq": {
-		//		"type": "double",
-		//		"value": 20e3,
-		//		"name": "Cutoff frequency",
-		//		"description": "Low pass filter cutoff frequency"
-		//	},
-		//	"transition_bw": {
-		//		"type": "double",
-		//		"value": 500,
-		//		"name": "Transition frequency",
-		//		"description": "Low pass filter transition bandwidth"
-		//	}
-		},
 		"work": {
 			"baseband": {},
 			"soft": {

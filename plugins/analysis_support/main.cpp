@@ -14,7 +14,7 @@ public:
 
     void init()
     {
-        satdump::eventBus->register_handler<RegisterModulesEvent>(registerPluginsHandler);
+	    satdump::eventBus->register_handler<RegisterModulesEvent>(registerPluginsHandler);
     }
 
     static void registerPluginsHandler(const RegisterModulesEvent &evt)

@@ -20,8 +20,8 @@ namespace analysis
 	class AnalysisWork : public demod::BaseDemodModule
 	{
 		protected:
-			std::atomic<uint64_t> filesize;
-			std::atomic<uint64_t> progress;
+			//std::atomic<uint64_t> filesize;
+			//std::atomic<uint64_t> progress;
 
 			double d_cutoff_freq;
 			double d_transition_bw;
@@ -43,9 +43,10 @@ namespace analysis
 			void init();
 			void stop();
 			void process();
+			
 			void drawUI(bool window);
-			std::vector<ModuleDataType> getInputTypes();
-			std::vector<ModuleDataType> getOutputTypes();
+			//std::vector<ModuleDataType> getInputTypes();
+			//std::vector<ModuleDataType> getOutputTypes();
 
 		public:
 			static std::string getID();

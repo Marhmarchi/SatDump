@@ -137,13 +137,31 @@ namespace analysis
 		if (output_data_type == DATA_FILE)
 			data_out.close();
 	}
-
-		void AnalysisWork::drawUI(bool window)
+	
+	void AnalysisWork::drawUI(bool window)
 	{
-		ImGui::Begin("Analysis Plugin (very vey WIP)", NULL, window ? 0 : NOWINDOW_FLAGS);
+		ImGui::Begin(name.c_str(), NULL, window ? 0 : NOWINDOW_FLAGS);
+
+		ImGui::BeginGroup();
+		{
+			// Show SNR information
+			ImGui::Button("Signal", {200 * ui_scale, 20 * ui_scale});
+			snr_plot.draw(snr, peak_snr);
+			if (!streamingInput)
+				if (ImGui::Checkbox("Show FFT", &show_fft))
+					fft_splitter->set_enabled("fft", show_fft);
+		}
+		ImGui::EndGroup();
+
+		//ImGui::Begin("Analysis Plugin (very vey WIP)", NULL, window ? 0 : NOWINDOW_FLAGS);
 		if (input_data_type == DATA_FILE)
 			ImGui::ProgressBar((double)progress / (double)filesize, ImVec2(ImGui::GetWindowWidth() - 10, 20 * ui_scale));
+
+		drawStopButton();
+
 		ImGui::End();
+
+		drawFFT();
 	}
 
 	std::string AnalysisWork::getID()
