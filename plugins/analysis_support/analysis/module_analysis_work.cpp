@@ -81,6 +81,7 @@ namespace analysis
 
 		// Start
 		BaseDemodModule::start();
+		res->start();
 		lpf->start();
 
 		//Buffer
@@ -136,6 +137,7 @@ namespace analysis
 	void AnalysisWork::stop()
 	{
 		BaseDemodModule::stop();
+		res->start();
 		lpf->stop();
 
 		if (output_data_type == DATA_FILE)
