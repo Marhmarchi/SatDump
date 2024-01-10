@@ -153,7 +153,7 @@ namespace analysis
 
 	std::vector<std::string> AnalysisWork::getParameters()
 	{
-		return {};
+		return {"cutoff_freq", "transition_bw"};
 	}
 
 	std::shared_ptr<ProcessingModule> AnalysisWork::getInstance(std::string input_file, std::string output_file_hint, nlohmann::json parameters)
