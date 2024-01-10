@@ -47,9 +47,10 @@ namespace analysis
 		BaseDemodModule::initb();
 
 		// Resampler
+		res = std::make_shared<dsp::RationalResamplerBlock<complex_t>>(agc->output_stream, d_samplerate, final_samplerate);
 
 		// Low pass filter
-		lpf = std::make_shared<dsp::FIRBlock<complex_t>>(agc->output_stream, dsp::firdes::low_pass(1.0, d_samplerate, d_cutoff_freq, d_transition_bw));
+		lpf = std::make_shared<dsp::FIRBlock<complex_t>>(res->output_stream, dsp::firdes::low_pass(1.0, d_samplerate, d_cutoff_freq, d_transition_bw));
 	}
 
 	AnalysisWork::~AnalysisWork()

@@ -27,7 +27,7 @@ namespace analysis
 			double d_transition_bw;
 			//long d_samplerate;
 
-			//std::shared_ptr<dsp::RationalResamplerBlock<complex_t>> res;
+			std::shared_ptr<dsp::RationalResamplerBlock<complex_t>> res;
 			std::shared_ptr<dsp::FIRBlock<complex_t>> lpf;
 			//std::shared_ptr<dsp::AGC2Block<complex_t>> agc2;
 
