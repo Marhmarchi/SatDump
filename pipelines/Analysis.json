@@ -11,7 +11,7 @@
 		"frequencies": [],
 		"work": {
 			"baseband": {},
-			"analysis_file": {
+			"soft": {
 				"analysis_work": {
 					"cutoff_freq": 20e3,
 					"transition_bw": 500
