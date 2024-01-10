@@ -9,24 +9,26 @@
 			]
 		],
 		"frequencies": [],
-		"parameters" {
-			"cutoff_freq": {
-				"type": "double",
-				"value": 20e3,
-				"name": "Cutoff frequency",
-				"description": "Low pass filter cutoff frequency"
-			},
-			"transition_bw": {
-				"type": "double",
-				"value": 500,
-				"name": "Transition frequency",
-				"description": "Low pass filter transition bandwidth"
-			}
+		"parameters": {
+		//	"cutoff_freq": {
+		//		"type": "double",
+		//		"value": 20e3,
+		//		"name": "Cutoff frequency",
+		//		"description": "Low pass filter cutoff frequency"
+		//	},
+		//	"transition_bw": {
+		//		"type": "double",
+		//		"value": 500,
+		//		"name": "Transition frequency",
+		//		"description": "Low pass filter transition bandwidth"
+		//	}
 		},
 		"work": {
 			"baseband": {},
-			"products": {
+			"analysis": {
 				"analysis_plugin": {
+					"cutoff_freq": 20e3,
+					"transition_bw": 500
 				}
 			}
 		}

@@ -159,6 +159,13 @@ if(PLUGIN_ORBCOMM OR PLUGINS_ALL)
     add_subdirectory(orbcomm_support)
 endif()
 
+option(PLUGIN_ANALYSIS "Enable the support plugin for the analysis plugin" OFF)
+
+if(PLUGIN_ANALYSIS OR PLUGINS_ALL)
+    add_subdirectory(analysis_plugin)
+endif()
+
+
 option(PLUGIN_GCOM "Enable the support plugin for the GCOM satellites" OFF)
 
 if(PLUGIN_GCOM OR PLUGINS_ALL)

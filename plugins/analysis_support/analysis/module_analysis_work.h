@@ -15,7 +15,7 @@
 #include "modules/demod/module_demod_base.h"
 
 
-namespace analysis_support
+namespace analysis
 {
 	class AnalysisWork : public demod::BaseDemodModule
 	{

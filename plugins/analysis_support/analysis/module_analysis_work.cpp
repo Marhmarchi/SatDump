@@ -1,4 +1,4 @@
-#include "analysis_work.h"
+#include "module_analysis_work.h"
 #include "common/dsp/buffer.h"
 #include "common/dsp/filter/fir.h"
 #include "common/dsp/resamp/rational_resampler.h"
@@ -29,7 +29,7 @@
 
 #define BUFFER_SIZE 8192
 
-namespace analysis_support
+namespace analysis
 {
 	AnalysisWork::AnalysisWork(std::string input_file, std::string output_file_hint, nlohmann::json parameters)
 		: BaseDemodModule(input_file, output_file_hint, parameters),
@@ -138,65 +138,7 @@ namespace analysis_support
 			data_out.close();
 	}
 
-	
-
-
-
-
-		// Init stream source
-		//std::shared_ptr<dsp::stream<complex_t>> input_stream = std::make_shared<dsp::stream<complex_t>>();
-
-		// Init blocks
-		//agc2 = std::make_shared<dsp::AGC2Block<complex_t>>(input_stream, 5.0, 0.01, 0.001);
-		//lpf = std::make_shared<dsp::FIRBlock<complex_t>>(agc2->output_stream, dsp::firdes::low_pass(1, d_samplerate, d_cutoff_freq, d_transition_bw));
-
-		// Start everything
-		//agc2->start();
-		//lpf->start();
-
-		//while (input_data_type == DATA_FILE ? !data_in.eof() : input_active.load())
-		//{
-//
-//			if (input_data_type == DATA_FILE)
-//				data_in.read((char *)input_buffer, BUFFER_SIZE * sizeof(complex_t));
-//			else
-//				input_fifo->read((uint8_t *)input_buffer, BUFFER_SIZE * sizeof(complex_t));
-//
-//			int dat_size = lpf->output_stream->read();
-//
-//			if (dat_size <= 0)
-//			{
-//				lpf->output_stream->flush();
-//				continue;
-//			}
-//
-//
-//
-
-//			volk_32fc_x2_multiply_32fc((lv_32fc_t *)output_buffer, (lv_32fc_t *)input_buffer, (lv_32fc_t *)input_buffer, 8192);
-
-
-
-//
-//			if (input_data_type == DATA_FILE)
-//				progress = data_in.tellg();
-//			if (time(NULL) % 10 == 0 && lastTime != time(NULL))
-//			{
-//				lastTime = time(NULL);
-//				logger->info("Progress " + std::to_string(round(((double)progress / (double)filesize) * 1000.0) / 10.0) + "%%");
-//			}
-//		}
-
-		//Stop everything
-//		agc2->stop();
-//		lpf->stop();
-//		if (input_data_type == DATA_FILE)
-//			data_in.close();
-
-
-//	};
-
-	void AnalysisWork::drawUI(bool window)
+		void AnalysisWork::drawUI(bool window)
 	{
 		ImGui::Begin("Analysis Plugin (very vey WIP)", NULL, window ? 0 : NOWINDOW_FLAGS);
 		if (input_data_type == DATA_FILE)
@@ -206,7 +148,7 @@ namespace analysis_support
 
 	std::string AnalysisWork::getID()
 	{
-		return "analysis_plugin";
+		return "analysis_work";
 	}
 
 	std::vector<std::string> AnalysisWork::getParameters()
