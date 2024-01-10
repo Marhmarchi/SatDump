@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common/dsp/filter/fir.h"
+#include "common/dsp/resamp/rational_resampler.h"
 #include "common/dsp/utils/agc2.h"
 #include "core/module.h"
 #include "nlohmann/json.hpp"
@@ -11,11 +12,12 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include "modules/demod/module_demod_base.h"
 
 
 namespace analysis_support
 {
-	class AnalysisWork : public ProcessingModule
+	class AnalysisWork : public demod::BaseDemodModule
 	{
 		protected:
 			std::atomic<uint64_t> filesize;
@@ -23,10 +25,11 @@ namespace analysis_support
 
 			double d_cutoff_freq;
 			double d_transition_bw;
-			long d_samplerate;
+			//long d_samplerate;
 
+			//std::shared_ptr<dsp::RationalResamplerBlock<complex_t>> res;
 			std::shared_ptr<dsp::FIRBlock<complex_t>> lpf;
-			std::shared_ptr<dsp::AGC2Block<complex_t>> agc2;
+			//std::shared_ptr<dsp::AGC2Block<complex_t>> agc2;
 
 			std::ifstream data_in;
 			std::ofstream data_out;
@@ -37,6 +40,8 @@ namespace analysis_support
 		public:
 			AnalysisWork(std::string input_file, std::string output_file_hint, nlohmann::json parameters);
 			~AnalysisWork();
+			void init();
+			void stop();
 			void process();
 			void drawUI(bool window);
 			std::vector<ModuleDataType> getInputTypes();
