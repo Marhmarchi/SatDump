@@ -1,4 +1,4 @@
-#include "module_analysis_work.h"
+#include "module_analysis_psk.h"
 #include "common/dsp/buffer.h"
 #include "common/dsp/filter/fir.h"
 #include "common/dsp/resamp/rational_resampler.h"
@@ -31,7 +31,7 @@
 
 namespace analysis
 {
-	AnalysisWork::AnalysisWork(std::string input_file, std::string output_file_hint, nlohmann::json parameters)
+	AnalysisPsk::AnalysisPsk(std::string input_file, std::string output_file_hint, nlohmann::json parameters)
 		: BaseDemodModule(input_file, output_file_hint, parameters),
 		d_cutoff_freq(parameters["cutoff_freq"].get<double>()),
 		d_transition_bw(parameters["transition_bw"].get<double>())
@@ -45,7 +45,7 @@ namespace analysis
 		MAX_SPS = 1000.0;
 	}
 
-	void AnalysisWork::init()
+	void AnalysisPsk::init()
 	{
 		BaseDemodModule::initb();
 
@@ -56,11 +56,11 @@ namespace analysis
 		lpf = std::make_shared<dsp::FIRBlock<complex_t>>(agc->output_stream, dsp::firdes::low_pass(1.0, final_samplerate, d_cutoff_freq, d_transition_bw));
 	}
 
-	AnalysisWork::~AnalysisWork()
+	AnalysisPsk::~AnalysisPsk()
 	{
 	}
 
-	void AnalysisWork::process()
+	void AnalysisPsk::process()
 	{
 		if (input_data_type == DATA_FILE)
 			filesize = file_source->getFilesize();
@@ -134,7 +134,7 @@ namespace analysis
 			stop();
 	}
 
-	void AnalysisWork::stop()
+	void AnalysisPsk::stop()
 	{
 		BaseDemodModule::stop();
 		res->start();
@@ -144,7 +144,7 @@ namespace analysis
 			data_out.close();
 	}
 	
-	void AnalysisWork::drawUI(bool window)
+	void AnalysisPsk::drawUI(bool window)
 	{
 		ImGui::Begin(name.c_str(), NULL, window ? 0 : NOWINDOW_FLAGS);
 
@@ -170,19 +170,19 @@ namespace analysis
 		drawFFT();
 	}
 
-	std::string AnalysisWork::getID()
+	std::string AnalysisPsk::getID()
 	{
-		return "analysis_work";
+		return "analysis_psk";
 	}
 
-	std::vector<std::string> AnalysisWork::getParameters()
+	std::vector<std::string> AnalysisPsk::getParameters()
 	{
 		return {"cutoff_freq", "transition_bw"};
 	}
 
-	std::shared_ptr<ProcessingModule> AnalysisWork::getInstance(std::string input_file, std::string output_file_hint, nlohmann::json parameters)
+	std::shared_ptr<ProcessingModule> AnalysisPsk::getInstance(std::string input_file, std::string output_file_hint, nlohmann::json parameters)
 	{
-		return std::make_shared<AnalysisWork>(input_file, output_file_hint, parameters);
+		return std::make_shared<AnalysisPsk>(input_file, output_file_hint, parameters);
 	}
 
 }

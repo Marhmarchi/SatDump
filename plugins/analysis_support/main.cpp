@@ -2,7 +2,7 @@
 #include "logger.h"
 #include "core/module.h"
 
-#include "analysis/module_analysis_work.h"
+#include "analysis/module_analysis_psk.h"
 
 class AnalysisPluginSupport : public satdump::Plugin
 {
@@ -19,7 +19,7 @@ public:
 
     static void registerPluginsHandler(const RegisterModulesEvent &evt)
     {
-        REGISTER_MODULE_EXTERNAL(evt.modules_registry, analysis::AnalysisWork);
+        REGISTER_MODULE_EXTERNAL(evt.modules_registry, analysis::AnalysisPsk);
     }
 };
 

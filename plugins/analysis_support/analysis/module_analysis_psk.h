@@ -17,7 +17,7 @@
 
 namespace analysis
 {
-	class AnalysisWork : public demod::BaseDemodModule
+	class AnalysisPsk : public demod::BaseDemodModule
 	{
 		protected:
 			//std::atomic<uint64_t> filesize;
@@ -38,8 +38,8 @@ namespace analysis
 			complex_t *output_buffer;
 
 		public:
-			AnalysisWork(std::string input_file, std::string output_file_hint, nlohmann::json parameters);
-			~AnalysisWork();
+			AnalysisPsk(std::string input_file, std::string output_file_hint, nlohmann::json parameters);
+			~AnalysisPsk();
 			void init();
 			void stop();
 			void process();

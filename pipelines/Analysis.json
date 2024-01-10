@@ -12,7 +12,7 @@
 		"work": {
 			"baseband": {},
 			"soft": {
-				"analysis_work": {
+				"analysis_psk": {
 					"symbolrate": 100e3,
 					"cutoff_freq": 20e3,
 					"transition_bw": 500
