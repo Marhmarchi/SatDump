@@ -40,6 +40,9 @@ namespace analysis
 		show_freq = true;
 		//input_buffer = new complex_t[BUFFER_SIZE];
 		//output_buffer = new complex_t[BUFFER_SIZE];
+		
+		MIN_SPS = 1;
+		MAX_SPS = 1000.0;
 	}
 
 	void AnalysisWork::init()
@@ -47,7 +50,7 @@ namespace analysis
 		BaseDemodModule::initb();
 
 		// Resampler
-		//res = std::make_shared<dsp::RationalResamplerBlock<complex_t>>(agc->output_stream, d_samplerate, final_samplerate);
+		res = std::make_shared<dsp::RationalResamplerBlock<complex_t>>(agc->output_stream, d_symbolrate, final_samplerate);
 
 		// Low pass filter
 		lpf = std::make_shared<dsp::FIRBlock<complex_t>>(agc->output_stream, dsp::firdes::low_pass(1.0, final_samplerate, d_cutoff_freq, d_transition_bw));

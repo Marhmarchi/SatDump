@@ -13,6 +13,7 @@
 			"baseband": {},
 			"soft": {
 				"analysis_work": {
+					"symbolrate": 100e3,
 					"cutoff_freq": 20e3,
 					"transition_bw": 500
 				}
