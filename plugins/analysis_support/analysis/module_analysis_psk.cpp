@@ -1,29 +1,10 @@
 #include "module_analysis_psk.h"
-#include "common/dsp/buffer.h"
-#include "common/dsp/filter/fir.h"
-#include "common/dsp/resamp/rational_resampler.h"
-#include "common/dsp/utils/agc2.h"
 #include "common/utils.h"
-#include "core/module.h"
-#include "imgui/imgui_flags.h"
 #include "logger.h"
 #include "imgui/imgui.h"
 
-
 #include "common/dsp/filter/firdes.h"
-#include "modules/demod/module_demod_base.h"
-#include "nlohmann/json.hpp"
-#include <algorithm>
-#include <bits/types/time_t.h>
 #include <complex.h>
-#include <cstddef>
-#include <cstdint>
-#include <fstream>
-#include <istream>
-#include <memory>
-#include <new>
-#include <string>
-#include <vector>
 #include <volk/volk.h>
 #include <volk/volk_complex.h>
 
@@ -69,8 +50,8 @@ namespace analysis
 
 		if (input_data_type == DATA_FILE)
 		{
-			data_out = std::ofstream(d_output_file_hint + ".F32", std::ios::binary);
-			d_output_files.push_back(d_output_file_hint + ".F32");
+			data_out = std::ofstream(d_output_file_hint + ".f32", std::ios::binary);
+			d_output_files.push_back(d_output_file_hint + ".f32");
 		}
 
 		logger->info("Using input baseband" + d_input_file);
@@ -86,8 +67,9 @@ namespace analysis
 
 		//Buffer
 		complex_t *output_buffer = new complex_t[d_buffer_size];
-		int final_data_size = 0;
+		complex_t *input_buffer = new complex_t[d_buffer_size];
 
+		int final_data_size = 0;
 		int dat_size = 0;
 		while (demod_should_run())
 		{
@@ -99,12 +81,9 @@ namespace analysis
 				continue;
 			}
 
-			for (int i = 0; i < dat_size; i++)
-			{
-				lpf->output_stream->readBuf[i];
-			}
-
 			volk_32fc_x2_multiply_32fc((lv_32fc_t *)output_buffer, (lv_32fc_t *)lpf->output_stream->readBuf, (lv_32fc_t *)lpf->output_stream->readBuf, dat_size);
+
+			logger->trace("%f", lpf->output_stream->readBuf[0]);
 
 			if (output_data_type == DATA_FILE)
 			{

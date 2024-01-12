@@ -1,18 +1,10 @@
 #pragma once
 
+#include "modules/demod/module_demod_base.h"
+#include "nlohmann/json.hpp"
 #include "common/dsp/filter/fir.h"
 #include "common/dsp/resamp/rational_resampler.h"
-#include "common/dsp/utils/agc2.h"
 #include "core/module.h"
-#include "nlohmann/json.hpp"
-#include <atomic>
-#include <complex.h>
-#include <cstdint>
-#include <fstream>
-#include <memory>
-#include <string>
-#include <vector>
-#include "modules/demod/module_demod_base.h"
 
 
 namespace analysis
