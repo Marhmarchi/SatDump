@@ -66,8 +66,8 @@ namespace analysis
 		lpf->start();
 
 		//Buffer
-		complex_t *output_buffer = new complex_t[d_buffer_size];
-		complex_t *input_buffer = new complex_t[d_buffer_size];
+		//complex_t *output_buffer = new complex_t[d_buffer_size];
+		//complex_t *input_buffer = new complex_t[d_buffer_size];
 
 		int final_data_size = 0;
 		int dat_size = 0;
@@ -81,18 +81,18 @@ namespace analysis
 				continue;
 			}
 
-			volk_32fc_x2_multiply_32fc((lv_32fc_t *)output_buffer, (lv_32fc_t *)lpf->output_stream->readBuf, (lv_32fc_t *)lpf->output_stream->readBuf, dat_size);
+			//volk_32fc_x2_multiply_32fc((lv_32fc_t *)output_buffer, (lv_32fc_t *)lpf->output_stream->readBuf, (lv_32fc_t *)lpf->output_stream->readBuf, dat_size);
 
-			logger->trace("%f", lpf->output_stream->readBuf[0]);
+			//logger->trace("%f", lpf->output_stream->readBuf[0]);
 
 			if (output_data_type == DATA_FILE)
 			{
-				data_out.write((char *)output_buffer, dat_size * sizeof(complex_t));
-				final_data_size += dat_size * sizeof(complex_t);
+				data_out.write((char *)lpf->output_stream->readBuf, dat_size * sizeof(complex_t)* 2);
+				//final_data_size += dat_size * sizeof(complex_t);
 			}
 			else 
 			{
-				output_fifo->write((uint8_t *)output_buffer, dat_size * sizeof(complex_t));
+				output_fifo->write((uint8_t *)lpf->output_stream->readBuf, dat_size * sizeof(complex_t)* 2);
 			}
 
 			lpf->output_stream->flush();
@@ -107,6 +107,8 @@ namespace analysis
 			}
 		}
 
+		//delete[] output_buffer;
+
 		delete[] output_buffer;
 
 		if (input_data_type == DATA_FILE)
@@ -116,8 +118,9 @@ namespace analysis
 	void AnalysisPsk::stop()
 	{
 		BaseDemodModule::stop();
-		res->start();
+		res->stop();
 		lpf->stop();
+		lpf->output_stream->stopReader();
 
 		if (output_data_type == DATA_FILE)
 			data_out.close();
