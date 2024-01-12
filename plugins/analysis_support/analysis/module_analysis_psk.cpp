@@ -69,7 +69,7 @@ namespace analysis
 		//complex_t *output_buffer = new complex_t[d_buffer_size];
 		//complex_t *input_buffer = new complex_t[d_buffer_size];
 
-		int final_data_size = 0;
+		//int final_data_size = 0;
 		int dat_size = 0;
 		while (demod_should_run())
 		{
@@ -83,16 +83,17 @@ namespace analysis
 
 			//volk_32fc_x2_multiply_32fc((lv_32fc_t *)output_buffer, (lv_32fc_t *)lpf->output_stream->readBuf, (lv_32fc_t *)lpf->output_stream->readBuf, dat_size);
 
-			//logger->trace("%f", lpf->output_stream->readBuf[0]);
 
 			if (output_data_type == DATA_FILE)
 			{
-				data_out.write((char *)lpf->output_stream->readBuf, dat_size * sizeof(complex_t)* 2);
+				data_out.write((char *)lpf->output_stream->readBuf, dat_size);
+				logger->trace("%f", lpf->output_stream->readBuf);
 				//final_data_size += dat_size * sizeof(complex_t);
 			}
 			else 
 			{
-				output_fifo->write((uint8_t *)lpf->output_stream->readBuf, dat_size * sizeof(complex_t)* 2);
+				output_fifo->write((uint8_t *)lpf->output_stream->readBuf, dat_size);
+				logger->trace("%f", lpf->output_stream->readBuf);
 			}
 
 			lpf->output_stream->flush();
@@ -108,8 +109,6 @@ namespace analysis
 		}
 
 		//delete[] output_buffer;
-
-		delete[] output_buffer;
 
 		if (input_data_type == DATA_FILE)
 			stop();

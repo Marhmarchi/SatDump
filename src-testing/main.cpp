@@ -13,7 +13,12 @@
 #include "logger.h"
 #include <fstream>
 #include <cstring>
+#include <volk/volk.h>
+#include <volk/volk_complex.h>
 #include "common/image/image.h"
+#include "common/dsp/complex.h"
+
+#define BUFFER_SIZE 8192
 
 int main(int /*argc*/, char *argv[])
 {
@@ -21,33 +26,17 @@ int main(int /*argc*/, char *argv[])
     completeLoggerInit();
 
     std::ifstream data_in(argv[1], std::ios::binary);
+    std::ofstream data_out(argv[2], std::ios::binary);
 
-    std::vector<uint8_t> img_vector;
+    complex_t input_buffer[BUFFER_SIZE];
+    complex_t output_buffer[BUFFER_SIZE];
 
     while (!data_in.eof())
     {
-        uint8_t frm[70];
-        data_in.read((char *)frm, 70);
+	    data_in.read((char *)input_buffer, BUFFER_SIZE * sizeof(complex_t));
 
-        if (frm[4] == 0x02)
-        {
+	    volk_32fc_x2_multiply_32fc((lv_32fc_t *)output_buffer, (lv_32fc_t *)input_buffer, (lv_32fc_t *)input_buffer, BUFFER_SIZE);
 
-            uint16_t hdr = frm[4 + 1] << 8 | frm[4 + 0];
-            uint8_t data_size = frm[4 + 2];
-            uint16_t msg_type = frm[4 + 4] << 8 | frm[4 + 3];
-            uint16_t pkt_offset = frm[4 + 6] << 8 | frm[4 + 5];
-
-            logger->trace(pkt_offset);
-
-            int new_size = pkt_offset + 56;
-            if (img_vector.size() < new_size)
-                img_vector.resize(new_size);
-
-            memcpy(&img_vector[pkt_offset], &frm[4 + 8], 56);
-        }
+	    data_out.write((char *)output_buffer, BUFFER_SIZE * sizeof(complex_t));
     }
-
-    image::Image<uint8_t> img_final;
-    img_final.load_jpeg(img_vector.data(), img_vector.size());
-    img_final.save_png("strato.png");
 }
