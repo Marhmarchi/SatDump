@@ -55,6 +55,7 @@ int main(int argc, char *argv[])
     }
     if (parameters.contains("exponentiate"))
     {
+	    logger->info("Exponentiate selected!");
 	    uint8_t exponent;
 	    try {
 		    exponent = parameters["exponentiate"].get<uint8_t>();
