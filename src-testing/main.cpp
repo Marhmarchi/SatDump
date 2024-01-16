@@ -47,17 +47,36 @@ int main(int argc, char *argv[])
 
     complex_t last_samp = 0;
 
+    nlohmann::json parameters = parse_common_flags(argc - 3, &argv[3]);
+
+    if (parameters.contains("multiply_conjugate"))
+    {
+	    logger->info("Multiply conjugate selected!");
+    }
+    if (parameters.contains("exponentiate"))
+    {
+	    uint8_t exponent;
+	    try {
+		    exponent = parameters["exponentiate"].get<uint8_t>();
+	    }
+	    catch (std::exception &e)
+	    {
+		    logger->error("Error parsing argument! %s", e.what());
+	    }
+	    if (exponent <= 1)
+	    {
+		    logger->error("Exponent number must be > 1!!");
+	    }
+    }
 
     while (!data_in.eof())
     {
 	    data_in.read((char *)input_buffer, BUFFER_SIZE * sizeof(complex_t));
 
-	    nlohmann::json parameters = parse_common_flags(argc - 3, &argv[3]);
 
 	    //if (std::string(argv[3]) == "multiply_conjugate")
 	    if (parameters.contains("multiply_conjugate"))
 	    {
-		    logger->info("Multiply conjugate selected!");
 
 		    // Delay 1 sample
 		    for (int i = 0; i < BUFFER_SIZE; i++)
@@ -85,15 +104,10 @@ int main(int argc, char *argv[])
 		    {
 			    logger->error("Error parsing argument! %s", e.what());
 		    }
-		    if (exponent > 1) {
 			    volk_32fc_x2_multiply_32fc((lv_32fc_t *)output_buffer, (lv_32fc_t *)input_buffer, (lv_32fc_t *)input_buffer, BUFFER_SIZE);
 			    for (int i = 2; i < exponent; i++) {
 				    volk_32fc_x2_multiply_32fc((lv_32fc_t *)output_buffer, (lv_32fc_t *)output_buffer, (lv_32fc_t *)input_buffer, BUFFER_SIZE);
 			    }
-		    }
-		    else {
-		    logger->error("Exponent number must be > 1!!");
-		    }
 	    }
 
 	    data_out.write((char *)output_buffer, BUFFER_SIZE * sizeof(complex_t));
