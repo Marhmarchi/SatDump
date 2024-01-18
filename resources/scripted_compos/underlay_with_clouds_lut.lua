@@ -3,8 +3,12 @@
 -- Usually used for APT imagery
 
 function init()
-    sat_proj = get_sat_proj()
+    if not has_sat_proj() then
+        lerror("This composite requires projection info")
+        return 0
+    end
 
+    sat_proj = get_sat_proj()
     img_background = image8.new()
     img_background:load_jpeg(get_resource_path("maps/nasa_hd.jpg"))
 
@@ -12,7 +16,7 @@ function init()
     equ_proj:init(img_background:width(), img_background:height(), -180, 90, 180, -90)
 
     img_rainnolut = image8.new()
-    img_rainnolut:load_png(get_resource_path(lua_vars["lut"]))
+    img_rainnolut:load_png(get_resource_path(lua_vars["lut"]), false)
 
     cfg_offset = lua_vars["minoffset"]
     cfg_scalar = lua_vars["scalar"]
@@ -54,12 +58,12 @@ function process()
                 val_lut = {}
                 val = {}
 
-                val_lut[0] = img_rainnolut:get(0 * img_rainnolut:height() * img_rainnolut:width() +
-                    lut_y * img_rainnolut:width() + lut_x) / 255.0
-                val_lut[1] = img_rainnolut:get(1 * img_rainnolut:height() * img_rainnolut:width() +
-                    lut_y * img_rainnolut:width() + lut_x) / 255.0
-                val_lut[2] = img_rainnolut:get(2 * img_rainnolut:height() * img_rainnolut:width() +
-                    lut_y * img_rainnolut:width() + lut_x) / 255.0
+                val_lut[0] = img_rainnolut:get(math.floor(0 * img_rainnolut:height() * img_rainnolut:width() +
+                    lut_y * img_rainnolut:width() + lut_x)) / 255.0
+                val_lut[1] = img_rainnolut:get(math.floor(1 * img_rainnolut:height() * img_rainnolut:width() +
+                    lut_y * img_rainnolut:width() + lut_x)) / 255.0
+                val_lut[2] = img_rainnolut:get(math.floor(2 * img_rainnolut:height() * img_rainnolut:width() +
+                    lut_y * img_rainnolut:width() + lut_x)) / 255.0
 
                 val[0] = (val_lut[0] - cfg_offset) * cfg_scalar
                 val[1] = (val_lut[1] - cfg_offset) * cfg_scalar

@@ -55,16 +55,15 @@ namespace goes
             std::string filename, directory;
 
             void save();
-            void push2(image::Image<uint8_t> img, time_t time);
-            void push13(image::Image<uint8_t> img, time_t time);
+            void push2(image::Image<uint8_t> &img, time_t time);
+            void push13(image::Image<uint8_t> &img, time_t time);
 
         public:
             // UI Stuff
             lrit_image_status imageStatus;
-            int img_width, img_height;
             bool hasToUpdate = false;
             unsigned int textureID = 0;
             uint32_t *textureBuffer;
         };
-    } // namespace atms
-} // namespace jpss
+    } // namespace hrit
+} // namespace goes

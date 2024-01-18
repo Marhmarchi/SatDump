@@ -1,6 +1,7 @@
 #include "scheduler.h"
 #include "logger.h"
 #include "core/plugin.h"
+#include "common/utils.h"
 
 namespace satdump
 {
@@ -52,7 +53,7 @@ namespace satdump
                     for (auto &v : enabled_satellites)
                         if (v.norad == upcoming_satellite_passes_sel[0].norad)
                             obj = v;
-                    aos_callback(upcoming_satellite_passes_sel[0], obj);
+                    aos_callback(autotrack_cfg, upcoming_satellite_passes_sel[0], obj);
                     autotrack_pass_has_started = true;
                 }
             }
@@ -66,7 +67,7 @@ namespace satdump
                     for (auto &v : enabled_satellites)
                         if (v.norad == upcoming_satellite_passes_sel[0].norad)
                             obj = v;
-                    los_callback(upcoming_satellite_passes_sel[0], obj);
+                    los_callback(autotrack_cfg, upcoming_satellite_passes_sel[0], obj);
                 }
                 autotrack_pass_has_started = false;
                 updateAutotrackPasses(curr_time);
@@ -76,7 +77,7 @@ namespace satdump
                     for (auto &v : enabled_satellites)
                         if (v.norad == upcoming_satellite_passes_sel[0].norad)
                             obj = v;
-                    eng_callback(upcoming_satellite_passes_sel[0], obj);
+                    eng_callback(autotrack_cfg, upcoming_satellite_passes_sel[0], obj);
                 }
             }
 
@@ -160,7 +161,7 @@ namespace satdump
             for (auto &v : enabled_satellites)
                 if (v.norad == upcoming_satellite_passes_sel[0].norad)
                     obj = v;
-            eng_callback(upcoming_satellite_passes_sel[0], obj);
+            eng_callback(autotrack_cfg, upcoming_satellite_passes_sel[0], obj);
             autotrack_pass_has_started = false;
         }
         else

@@ -684,6 +684,26 @@
                         "geo_correct": true,
                         "autogen": false
                     },
+                    "Fog BTD (VERY experimental)": {
+                        "channels": "cch3b, cch4",
+                        "calib_cfg": {
+                            "cch3b": {
+                                "type": "temperature",
+                                "min": 0,
+                                "max": 500
+                            },
+                            "cch4": {
+                                "type": "temperature",
+                                "min": 0,
+                                "max": 500
+                            }
+                        },
+                        "lua": "scripted_compos/fog_btd.lua",
+                        "lut": "lut/cal/fog_btd.png",
+                        "description": "descriptions/sfog_btd.md",
+                        "geo_correct": true,
+                        "autogen": false
+                    },
                     "Sea Surface Temperature": {
                         "channels": "cch4",
                         "description": "descriptions/SST.md",
@@ -978,7 +998,7 @@
                         "lua": "scripted_compos/underlay_with_clouds_lut.lua",
                         "description": "descriptions/MCIR_precip.md",
                         "lua_vars": {
-                            "minoffset": 0.2,
+                            "minoffset": 0.25,
                             "scalar": 1.5,
                             "thresold": 0,
                             "lut": "lut/WXtoImg-NO_mod_APT.png"
