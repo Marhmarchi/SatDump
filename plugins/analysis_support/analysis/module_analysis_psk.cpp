@@ -1,10 +1,14 @@
 #include "module_analysis_psk.h"
+#include "common/dsp/io/wav_writer.h"
 #include "common/utils.h"
+#include "core/module.h"
 #include "logger.h"
 #include "imgui/imgui.h"
 
 #include "common/dsp/filter/firdes.h"
 #include <complex.h>
+#include <cstdint>
+#include <fstream>
 #include <volk/volk.h>
 #include <volk/volk_complex.h>
 
@@ -31,10 +35,10 @@ namespace analysis
 		BaseDemodModule::initb();
 
 		// Resampler
-		res = std::make_shared<dsp::RationalResamplerBlock<complex_t>>(agc->output_stream, d_symbolrate, final_samplerate);
+		//res = std::make_shared<dsp::RationalResamplerBlock<complex_t>>(agc->output_stream, d_symbolrate, final_samplerate);
 
 		// Low pass filter
-		lpf = std::make_shared<dsp::FIRBlock<complex_t>>(agc->output_stream, dsp::firdes::low_pass(1.0, final_samplerate, d_cutoff_freq, d_transition_bw));
+		lpf = std::make_shared<dsp::FIRBlock<complex_t>>(agc->output_stream, dsp::firdes::low_pass(1.0, d_symbolrate, d_cutoff_freq, d_transition_bw));
 	}
 
 	AnalysisPsk::~AnalysisPsk()
@@ -48,28 +52,47 @@ namespace analysis
 		else
 			filesize = 0;
 
-		if (input_data_type == DATA_FILE)
+		if (output_data_type == DATA_FILE)
 		{
-			data_out = std::ofstream(d_output_file_hint + ".f32", std::ios::binary);
-			d_output_files.push_back(d_output_file_hint + ".f32");
+			data_out = std::ofstream(d_output_file_hint + ".wav", std::ios::binary);
+			d_output_files.push_back(d_output_file_hint + ".wav");
 		}
+	
+		//std::ifstream data_in;
+
+		//{
+		//	data_out = std::ofstream(d_output_file_hint + ".f32", std::ios::binary);
+		//	d_output_files.push_back(d_output_file_hint + ".f32");
+		//}
+
+		//else
+		//	filesize = 0;
+
+		//if (input_data_type == DATA_FILE)
+		//{
+		//}
 
 		logger->info("Using input baseband" + d_input_file);
-		logger->info("Saving processed to " + d_output_file_hint + ".F32");
+		logger->info("Saving processed to " + d_output_file_hint + ".wav");
 		logger->info("Buffer size : " + std::to_string(d_buffer_size));
 
 		time_t lastTime = 0;
 
 		// Start
 		BaseDemodModule::start();
-		res->start();
+		//res->start();
 		lpf->start();
 
 		//Buffer
 		//complex_t *output_buffer = new complex_t[d_buffer_size];
 		//complex_t *input_buffer = new complex_t[d_buffer_size];
 
-		//int final_data_size = 0;
+		int16_t *output_wav_buffer = new int16_t[d_buffer_size * 100];
+		int final_data_size = 0;
+		dsp::WavWriter wave_writer(data_out);
+		if (output_data_type == DATA_FILE)
+			wave_writer.write_header(d_symbolrate, 1);
+	
 		int dat_size = 0;
 		while (demod_should_run())
 		{
@@ -81,18 +104,21 @@ namespace analysis
 				continue;
 			}
 
+			volk_32f_s32f_convert_16i(output_wav_buffer, (float *)lpf->output_stream->readBuf, 65535 * 0.68, dat_size);
+
 			//volk_32fc_x2_multiply_32fc((lv_32fc_t *)output_buffer, (lv_32fc_t *)lpf->output_stream->readBuf, (lv_32fc_t *)lpf->output_stream->readBuf, dat_size);
 
 
 			if (output_data_type == DATA_FILE)
 			{
-				data_out.write((char *)lpf->output_stream->readBuf, dat_size);
-				logger->trace("%f", lpf->output_stream->readBuf);
-				//final_data_size += dat_size * sizeof(complex_t);
+				//data_out.write((char *)lpf->output_stream->readBuf, dat_size * sizeof(complex_t));
+				data_out.write((char *)output_wav_buffer, dat_size * sizeof(int16_t));
+				//logger->trace("%f", lpf->output_stream->readBuf);
+				final_data_size += dat_size * sizeof(int16_t);
 			}
 			else 
 			{
-				output_fifo->write((uint8_t *)lpf->output_stream->readBuf, dat_size);
+				output_fifo->write((uint8_t *)output_wav_buffer, dat_size * sizeof(int16_t));
 				logger->trace("%f", lpf->output_stream->readBuf);
 			}
 
@@ -110,6 +136,11 @@ namespace analysis
 
 		//delete[] output_buffer;
 
+		// Finish up WAV
+		if (output_data_type == DATA_FILE)
+			wave_writer.finish_header(final_data_size);
+		delete[] output_wav_buffer;
+
 		if (input_data_type == DATA_FILE)
 			stop();
 	}
@@ -117,7 +148,7 @@ namespace analysis
 	void AnalysisPsk::stop()
 	{
 		BaseDemodModule::stop();
-		res->stop();
+		//res->stop();
 		lpf->stop();
 		lpf->output_stream->stopReader();
 

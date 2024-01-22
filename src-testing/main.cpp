@@ -12,16 +12,21 @@
 
 #include "common/cli_utils.h"
 #include "common/dsp/buffer.h"
+#include "common/dsp/filter/fir.h"
+#include "common/dsp/filter/firdes.h"
 #include "logger.h"
+#include <complex>
 #include <cstdint>
 #include <fstream>
 #include <cstring>
+#include <memory>
 #include <string>
 #include <volk/volk.h>
 #include <volk/volk_complex.h>
 #include "common/image/image.h"
 #include "common/dsp/complex.h"
 #include "nlohmann/json.hpp"
+#include "common/dsp/block.h"
 
 #define BUFFER_SIZE 8192
 
@@ -69,6 +74,10 @@ int main(int argc, char *argv[])
 		    logger->error("Exponent number must be > 1!!");
 	    }
     }
+    if (parameters.contains("LPF"))
+    {
+	    logger->info("Low pass filter selected!");
+    }
 
     while (!data_in.eof())
     {
@@ -109,6 +118,18 @@ int main(int argc, char *argv[])
 			    for (int i = 2; i < exponent; i++) {
 				    volk_32fc_x2_multiply_32fc((lv_32fc_t *)output_buffer, (lv_32fc_t *)output_buffer, (lv_32fc_t *)input_buffer, BUFFER_SIZE);
 			    }
+	    }
+
+	    if (parameters.contains("LPF"))
+	    {
+//		    std::shared_ptr<dsp::FIRBlock<complex_t>> lpf;
+//		    //std::shared_ptr<dsp::FIRBlock<complex_t>> lpf;
+//		    //lpf = std::make_shared<dsp::FIRBlock<complex_t>>(input_buffer, dsp::firdes::low_pass(1.0, 8000000, 200000, 2000));
+//		    //lpf = std::make_shared<dsp::FIRBlock<std::complex_t>>(output_stream, dsp::firdes::low_pass(1.0, 8000000, 200000, 2000));
+//
+//		    lpf = std::make_shared<dsp::FIRBlock<complex_t>>(output_buffer, dsp::firdes::low_pass(1.0, 8000000, 50000, 100));
+//		    lpf->input_stream->read();
+		    
 	    }
 
 	    data_out.write((char *)output_buffer, BUFFER_SIZE * sizeof(complex_t));
