@@ -5,6 +5,10 @@
 #include "common/dsp/filter/fir.h"
 #include "common/dsp/resamp/rational_resampler.h"
 #include "core/module.h"
+#include "common/dsp/fft/fft_pan.h"
+#include "common/widgets/fft_plot.h"
+#include "common/dsp/path/splitter.h"
+#include <memory>
 
 
 namespace analysis
@@ -25,6 +29,13 @@ namespace analysis
 
 			std::ifstream data_in;
 			std::ofstream data_out;
+
+			std::shared_ptr<dsp::SplitterBlock> fft_splitter;
+			std::shared_ptr<dsp::FFTPanBlock> fft_proc;
+			std::shared_ptr<widgets::FFTPlot> fft_plot;
+			//bool fft_is_enabled = true; -- for the future to use with offline
+
+			void drawAnaFFT();
 
 			complex_t *input_buffer;
 			complex_t *output_buffer;

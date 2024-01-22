@@ -9,6 +9,7 @@
 #include <complex.h>
 #include <cstdint>
 #include <fstream>
+#include <memory>
 #include <volk/volk.h>
 #include <volk/volk_complex.h>
 
@@ -82,6 +83,8 @@ namespace analysis
 		BaseDemodModule::start();
 		//res->start();
 		lpf->start();
+		//fft_splitter->start();
+		//fft_proc->start();
 
 		//Buffer
 		//complex_t *output_buffer = new complex_t[d_buffer_size];
@@ -124,6 +127,17 @@ namespace analysis
 
 			lpf->output_stream->flush();
 
+			//fft_splitter->start();
+			//fft_proc->start();
+			//fft_splitter->add_output("analysis_fft");
+			//fft_splitter->set_enabled("analysis_fft", true);
+			//fft_proc = std::make_unique<dsp::FFTPanBlock>(fft_splitter->get_output("analysis_fft"));
+                        //
+			//fft_proc->set_fft_settings(8192, d_symbolrate, 120);
+			//fft_proc->avg_num = 50;
+			//fft_plot = std::make_unique<widgets::FFTPlot>(fft_proc->output_stream->writeBuf, 8192, -10, 20, 10);
+			//fft_proc->on_fft = [this](float *v){};
+
 			if (input_data_type == DATA_FILE)
 				progress = file_source->getPosition();
 
@@ -151,6 +165,8 @@ namespace analysis
 		//res->stop();
 		lpf->stop();
 		lpf->output_stream->stopReader();
+		//fft_proc->stop();
+		//fft_splitter->stop();
 
 		if (output_data_type == DATA_FILE)
 			data_out.close();
@@ -180,7 +196,34 @@ namespace analysis
 		ImGui::End();
 
 		drawFFT();
+		//drawAnaFFT();
 	}
+
+	//void AnalysisPsk::drawAnaFFT()
+	//{
+	//	ImGui::SetNextWindowSize({400 * (float)ui_scale, (float)200 * (float)ui_scale});
+	//	if (ImGui::Begin("Testing", NULL, ImGuiWindowFlags_NoScrollbar))
+	//	{
+	//		fft_plot->draw({float(ImGui::GetWindowSize().x - 0), float(ImGui::GetWindowSize().y - 40 * ui_scale) * float(1.0)});
+
+	//		int pos = (abs((float)d_frequency_shift / (float)d_samplerate) * (float)8192) + 819;
+	//		pos %= 8192;
+
+	//		float min = 1000;
+	//		float max = -1000;
+	//		for (int i = 0; i < 6554; i++)
+	//		{
+	//			if (fft_proc->output_stream->writeBuf[pos] < min)
+	//				min = fft_proc->output_stream->writeBuf[pos];
+	//			if (fft_proc->output_stream->writeBuf[pos] > max)
+	//				max = fft_proc->output_stream->writeBuf[pos];
+	//			pos++;
+	//			if (pos >= 8192)
+	//				pos = 0;
+	//		}
+	//	}
+	//	ImGui::End();
+	//}
 
 	std::string AnalysisPsk::getID()
 	{
