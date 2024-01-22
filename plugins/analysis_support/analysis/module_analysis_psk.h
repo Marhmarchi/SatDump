@@ -33,7 +33,7 @@ namespace analysis
 			std::shared_ptr<dsp::SplitterBlock> fft_splitter;
 			std::shared_ptr<dsp::FFTPanBlock> fft_proc;
 			std::shared_ptr<widgets::FFTPlot> fft_plot;
-			//bool fft_is_enabled = true; -- for the future to use with offline
+			//bool fft_is_enabled = true;
 
 			void drawAnaFFT();
 

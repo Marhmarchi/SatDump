@@ -172,15 +172,15 @@ namespace analysis
 			data_out.close();
 	}
 	
-	void AnalysisPsk::drawUI(bool window)
+	void AnalysisPsk::drawUI(bool /*window*/)
 	{
-		ImGui::Begin(name.c_str(), NULL, window ? 0 : NOWINDOW_FLAGS);
+		ImGui::Begin("Analysis", NULL, ImGuiWindowFlags_NoScrollbar);
 
 		ImGui::BeginGroup();
 		{
 			// Show SNR information
-			ImGui::Button("Signal", {200 * ui_scale, 20 * ui_scale});
-			snr_plot.draw(snr, peak_snr);
+			//ImGui::Button("Signal", {200 * ui_scale, 20 * ui_scale});
+			//snr_plot.draw(snr, peak_snr);
 			if (!streamingInput)
 				if (ImGui::Checkbox("Show FFT", &show_fft))
 					fft_splitter->set_enabled("fft", show_fft);
@@ -190,6 +190,21 @@ namespace analysis
 		//ImGui::Begin("Analysis Plugin (very vey WIP)", NULL, window ? 0 : NOWINDOW_FLAGS);
 		if (input_data_type == DATA_FILE)
 			ImGui::ProgressBar((double)progress / (double)filesize, ImVec2(ImGui::GetWindowWidth() - 10, 20 * ui_scale));
+
+
+		ImGui::BeginTabBar("##analysistabbar");
+		{
+			if (ImGui::BeginTabItem("Symbol Rate"))
+			{
+				ImGui::EndTabItem();
+			}
+
+			if (ImGui::BeginTabItem("Order"))
+			{
+				ImGui::EndTabItem();
+			}
+		}
+		ImGui::EndTabBar();
 
 		drawStopButton();
 
