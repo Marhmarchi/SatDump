@@ -110,14 +110,16 @@ namespace analysis
 				continue;
 			}
 
-			volk_32f_s32f_convert_16i(output_wav_buffer, (float *)lpf->output_stream->readBuf, 65535 * 0.68, dat_size * 2);
+			volk_32f_x2_interleave_32fc((lv_32fc_t *)output_buffer, (float *)lpf->output_stream->readBuf, (float *)lpf->output_stream->readBuf, dat_size);
+
+			//volk_32f_s32f_convert_16i(output_wav_buffer, (float *)lpf->output_stream->readBuf, 65535 * 0.68, dat_size * 2);
 
 			//for (int i = 0; i < dat_size; i++)
 			//{
 
-				//volk_32f_x2_interleave_32fc((lv_32fc_t *)output_buffer, (float *)&lpf->output_stream->readBuf[i].real, (float *)&lpf->output_stream->readBuf[i].imag, dat_size);
 			//}
 			
+
 			
 			//for (int i = 0; i < dat_size; i++)
 			//{
@@ -131,14 +133,14 @@ namespace analysis
 
 			if (output_data_type == DATA_FILE)
 			{
-				//data_out.write((char *)output_buffer, dat_size * sizeof(complex_t));
-				data_out.write((char *)output_wav_buffer, dat_size * sizeof(int16_t) * 2);
+				data_out.write((char *)output_buffer, dat_size * sizeof(complex_t));
+				//data_out.write((char *)output_wav_buffer, dat_size * sizeof(int16_t) * 2);
 				//logger->trace("%f", lpf->output_stream->readBuf);
 				final_data_size += dat_size * sizeof(int16_t);
 			}
 			else 
 			{
-				output_fifo->write((uint8_t *)output_wav_buffer, dat_size * sizeof(int16_t) * 2);
+				//output_fifo->write((uint8_t *)output_wav_buffer, dat_size * sizeof(int16_t) * 2);
 				output_fifo->write((uint8_t *)output_buffer, dat_size * sizeof(complex_t));
 				logger->trace("%f", lpf->output_stream->readBuf);
 			}
