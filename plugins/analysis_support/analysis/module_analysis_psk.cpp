@@ -123,7 +123,7 @@ namespace analysis
 				//output_stream->writeBuf[i] = complex_t(real, imag);
 			}
 			
-			volk_32f_x2_interleave_32fc((lv_32fc_t *)output_buffer, (float *)real, (float *)imag, dat_size * sizeof(complex_t) * 2);
+			volk_32f_x2_interleave_32fc((lv_32fc_t *)output_buffer, (float *)real, (float *)imag, dat_size * sizeof(complex_t));
 
 			
 			//for (int i = 0; i < dat_size; i++)
