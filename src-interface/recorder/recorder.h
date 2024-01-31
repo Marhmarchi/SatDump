@@ -53,8 +53,8 @@ namespace satdump
         std::string recorder_filename;
         int select_sample_format = 0;
 
-        widgets::TimedMessage sdr_error = widgets::TimedMessage(ImColor(255, 0, 0), 4);
-        widgets::TimedMessage error = widgets::TimedMessage(ImColor(255, 0, 0), 4);
+        widgets::TimedMessage sdr_error;
+        widgets::TimedMessage error;
 
         std::shared_ptr<dsp::DSPSampleSource> source_ptr;
         std::shared_ptr<dsp::SmartResamplerBlock<complex_t>> decim_ptr;
@@ -97,6 +97,33 @@ namespace satdump
 
         // Debug
         widgets::ConstellationViewer *constellation_debug = nullptr;
+
+    private: // VFO Stuff
+        struct VFOInfo
+        {
+            ////
+            std::string id;
+            std::string name;
+            double freq;
+
+            //// Live
+            int pipeline_id = -1;
+            nlohmann::json pipeline_params;
+            std::string output_dir;
+            std::shared_ptr<ctpl::thread_pool> lpool;
+            std::shared_ptr<satdump::LivePipeline> live_pipeline;
+
+            //// Recording
+            std::shared_ptr<dsp::SmartResamplerBlock<complex_t>> decim_ptr;
+            std::shared_ptr<dsp::FileSinkBlock> file_sink;
+        };
+
+        std::mutex vfos_mtx;
+        std::vector<VFOInfo> vfo_list;
+
+        void add_vfo_live(std::string id, std::string name, double freq, int vpipeline_id, nlohmann::json vpipeline_params);
+        void add_vfo_reco(std::string id, std::string name, double freq, dsp::BasebandType type, int decimation = -1);
+        void del_vfo(std::string id);
 
     private:
         void start();

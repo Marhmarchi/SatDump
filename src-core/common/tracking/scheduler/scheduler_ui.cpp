@@ -5,10 +5,11 @@
 #include "core/style.h"
 #include "common/utils.h"
 #include "common/widgets/frequency_input.h"
+#include "resources.h"
 
 namespace satdump
 {
-    void AutoTrackScheduler::renderAutotrackConfig(bool light_theme, double curr_time)
+    void AutoTrackScheduler::renderAutotrackConfig(double curr_time)
     {
         if (!has_tle)
             return;
@@ -96,8 +97,13 @@ namespace satdump
         ImGui::Separator();
         ImGui::Spacing();
         ImGui::SetNextItemWidth(150 * ui_scale);
-        ImGui::InputFloat("Minimum Elevation", &autotrack_min_elevation);
+        ImGui::InputFloat("Minimum Elevation", &autotrack_cfg.autotrack_min_elevation);
+        ImGui::Checkbox("Multi Mode", &autotrack_cfg.multi_mode);
+        ImGui::SameLine();
         ImGui::Checkbox("Stop SDR When IDLE", &autotrack_cfg.stop_sdr_when_idle);
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
         if (ImGui::Button("Update Passes"))
         {
             updateAutotrackPasses(curr_time);
@@ -115,7 +121,7 @@ namespace satdump
             ImDrawList *draw_list = ImGui::GetWindowDrawList();
             draw_list->AddRectFilled(ImGui::GetCursorScreenPos(),
                                      ImVec2(ImGui::GetCursorScreenPos().x + d_pplot_size, ImGui::GetCursorScreenPos().y + d_pplot_height + 20 * ui_scale),
-                                     light_theme ? ImColor(255, 255, 255, 255) : ImColor::HSV(0, 0, 0));
+                                     style::theme.widget_bg);
 
             time_t tttime = curr_time;
             std::tm *timeReadable = gmtime(&tttime);
@@ -199,7 +205,7 @@ namespace satdump
                             if (cpass_xs > d_pplot_size)
                                 cpass_xs = d_pplot_size;
 
-                            auto color = ImColor(255, 255, 255, 255);
+                            auto color = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]);
                             draw_list->AddRect(ImVec2(ImGui::GetCursorScreenPos().x + cpass_xs, ImGui::GetCursorScreenPos().y + thsat_ys),
                                                ImVec2(ImGui::GetCursorScreenPos().x + cpass_xe, ImGui::GetCursorScreenPos().y + thsat_ye),
                                                color, 3, 0, 2 * ui_scale);
@@ -218,33 +224,61 @@ namespace satdump
         {
             for (auto &cpass : enabled_satellites)
             {
-                auto color = ImColor::HSV(fmod(cpass.norad, 10) / 10.0, 1, 1);
-                ImGui::TableNextRow();
-                ImGui::TableSetColumnIndex(0);
-                ImGui::SetNextItemWidth(100 * ui_scale);
-                ImGui::TextColored(color, "%s", general_tle_registry.get_from_norad(cpass.norad)->name.c_str());
-                ImGui::TableSetColumnIndex(1);
-                widgets::FrequencyInput(((std::string) "Hz##objcfgfreq1" + std::to_string(cpass.norad)).c_str(), &cpass.frequency, 0.75f);
-                ImGui::TableSetColumnIndex(2);
-                ImGui::SetNextItemWidth(100 * ui_scale);
-                ImGui::Checkbox(((std::string) "Record##objcfgfreq2" + std::to_string(cpass.norad)).c_str(), &cpass.record);
-                // ImGui::TableSetColumnIndex(3);
-                ImGui::Checkbox(((std::string) "Live##objcfgfreq3" + std::to_string(cpass.norad)).c_str(), &cpass.live);
-                ImGui::TableSetColumnIndex(3);
-                ImGui::SetNextItemWidth(300 * ui_scale);
-                ImGui::PushID(cpass.norad);
-                if (ImGui::BeginCombo("##pipelinesel", cpass.pipeline_selector->get_name(cpass.pipeline_selector->pipeline_id).c_str(), ImGuiComboFlags_HeightLarge))
+                int dl_pos = 0;
+                for (auto &downlink : cpass.downlinks)
                 {
-                    cpass.pipeline_selector->renderSelectionBox(300 * ui_scale);
-                    ImGui::EndCombo();
+                    std::string idpart = std::to_string(cpass.norad) + "_" + std::to_string((size_t)&downlink);
+
+                    auto color = ImColor::HSV(fmod(cpass.norad, 10) / 10.0, 1, 1);
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0);
+                    if (&downlink == &cpass.downlinks[0])
+                    {
+                        ImGui::SetNextItemWidth(100 * ui_scale);
+                        ImGui::TextColored(color, "%s", general_tle_registry.get_from_norad(cpass.norad)->name.c_str());
+                        if (ImGui::Button(((std::string) "+##objadddownlink" + std::to_string(cpass.norad)).c_str()))
+                        {
+                            cpass.downlinks.push_back(satdump::TrackedObject::Downlink());
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        if (ImGui::Button(((std::string) "-##objdeldownlink" + idpart).c_str()))
+                        {
+                            cpass.downlinks.erase(cpass.downlinks.begin() + dl_pos);
+                            break;
+                        }
+                    }
+                    ImGui::TableSetColumnIndex(1);
+                    widgets::FrequencyInput(((std::string) "Hz##objcfgfreq1" + idpart).c_str(), &downlink.frequency, 0.75f, false);
+                    ImGui::TableSetColumnIndex(2);
+                    ImGui::SetNextItemWidth(100 * ui_scale);
+                    ImGui::Checkbox(((std::string) "Record##objcfgfreq2" + idpart).c_str(), &downlink.record);
+                    // ImGui::TableSetColumnIndex(3);
+                    ImGui::Checkbox(((std::string) "Live##objcfgfreq3" + idpart).c_str(), &downlink.live);
+                    ImGui::TableSetColumnIndex(3);
+                    ImGui::SetNextItemWidth(300 * ui_scale);
+                    ImGui::PushID(cpass.norad);
+                    if (ImGui::BeginCombo(((std::string) "##pipelinesel" + idpart).c_str(), downlink.pipeline_selector->get_name(downlink.pipeline_selector->pipeline_id).c_str(), ImGuiComboFlags_HeightLarge))
+                    {
+                        downlink.pipeline_selector->renderSelectionBox(300 * ui_scale);
+                        ImGui::EndCombo();
+                    }
+                    if (ImGui::BeginCombo(((std::string) "##params" + idpart).c_str(), "Configure..."))
+                    {
+                        downlink.pipeline_selector->renderParamTable();
+                        ImGui::EndCombo();
+                    }
+                    if (downlink.record)
+                    {
+                        ImGui::SetNextItemWidth(100 * ui_scale);
+                        ImGui::InputInt(((std::string) "IQ Decimation##recorddecim" + idpart).c_str(), &downlink.baseband_decimation);
+                    }
+                    ImGui::PopID();
+                    // ImGui::InputText(((std::string) "Pipeline##objcfgfreq4" + std::to_string(cpass.norad)).c_str(), &cpass.pipeline_name);
+                    dl_pos++;
                 }
-                if (ImGui::BeginCombo("##params", "Configure..."))
-                {
-                    cpass.pipeline_selector->renderParamTable();
-                    ImGui::EndCombo();
-                }
-                ImGui::PopID();
-                // ImGui::InputText(((std::string) "Pipeline##objcfgfreq4" + std::to_string(cpass.norad)).c_str(), &cpass.pipeline_name);
             }
             ImGui::EndTable();
         }
@@ -270,5 +304,105 @@ namespace satdump
         upcoming_satellite_passes_mtx.unlock();
         if (set_engaged)
             setEngaged(autotrack_engaged, curr_time);
+    }
+
+    image::Image<uint8_t> AutoTrackScheduler::getScheduleImage(int width, double curr_time)
+    {
+        image::Image<uint8_t> img;
+
+        float ui_scale = 1;
+
+        {
+            int d_pplot_height = (enabled_satellites.size() * 20) * ui_scale;
+            int d_pplot_size = width;
+
+            img.init(width, d_pplot_height, 3);
+            img.fill(0);
+            img.init_font(resources::getResourcePath("fonts/font.ttf"));
+
+            uint8_t color_gray[] = {100, 100, 100};
+            uint8_t color_white[] = {255, 255, 255};
+
+            time_t tttime = curr_time;
+            std::tm *timeReadable = gmtime(&tttime);
+            int curr_hour = timeReadable->tm_hour;
+            int offset = d_pplot_size / 12 * (timeReadable->tm_min / 60.0);
+            //              ImGui::Dummy(ImVec2(0, 0));
+            for (int i = (timeReadable->tm_min < 30 ? 1 : 0); i < (timeReadable->tm_min < 30 ? 12 : 13); i++)
+            {
+                img.draw_text(i * d_pplot_size / 12 - offset, 0, color_gray, 10, svformat("%s%s%s", (curr_hour + i) % 24 < 10 ? "0" : "", std::to_string((curr_hour + i) % 24).c_str(), ":00"));
+            }
+            float sat_blk_height = ((float)d_pplot_height / (float)enabled_satellites.size());
+            for (int i = 0; i < (int)enabled_satellites.size(); i++)
+            {
+                auto &norad = enabled_satellites[i].norad;
+                int thsat_ys = sat_blk_height * i;
+                int thsat_ye = sat_blk_height * i + sat_blk_height;
+
+                bool first_pass = true;
+
+                for (auto &cpass : upcoming_satellite_passes_all)
+                {
+                    if (cpass.norad == norad)
+                    {
+                        double cpass_xs = ((cpass.aos_time - curr_time) / (12.0 * 3600.0)) * d_pplot_size;
+                        double cpass_xe = ((cpass.los_time - curr_time) / (12.0 * 3600.0)) * d_pplot_size;
+
+                        std::string name = general_tle_registry.get_from_norad(norad)->name;
+
+                        if (cpass_xs < 0)
+                            cpass_xs = 0;
+                        if (cpass_xe > d_pplot_size)
+                            cpass_xe = d_pplot_size;
+                        if (cpass_xs > d_pplot_size)
+                            cpass_xs = d_pplot_size;
+
+                        uint8_t color[3];
+                        hsv_to_rgb(fmod(norad, 10) / 10.0, 1, 1, color);
+                        img.draw_rectangle(cpass_xs, thsat_ys,
+                                           cpass_xe, thsat_ye,
+                                           color, true);
+
+                        if (first_pass)
+                        {
+                            img.draw_text(cpass_xe + 5 * ui_scale, thsat_ys + (sat_blk_height / 2) - 6 * ui_scale, color, 10, name);
+                            first_pass = false;
+                        }
+                    }
+                }
+
+                img.draw_line(0, thsat_ys,
+                              d_pplot_size - 1, thsat_ys,
+                              color_gray);
+                img.draw_line(0, thsat_ye,
+                              d_pplot_size - 1, thsat_ye,
+                              color_gray);
+
+                if (autotrack_engaged)
+                {
+                    for (auto &cpass : upcoming_satellite_passes_sel)
+                    {
+                        if (cpass.norad == norad)
+                        {
+                            double cpass_xs = ((cpass.aos_time - curr_time) / (12.0 * 3600.0)) * d_pplot_size;
+                            double cpass_xe = ((cpass.los_time - curr_time) / (12.0 * 3600.0)) * d_pplot_size;
+
+                            if (cpass_xs < 0)
+                                cpass_xs = 0;
+                            if (cpass_xe > d_pplot_size)
+                                cpass_xe = d_pplot_size;
+                            if (cpass_xs > d_pplot_size)
+                                cpass_xs = d_pplot_size;
+
+                            img.draw_rectangle(cpass_xs, thsat_ys,
+                                               cpass_xe, thsat_ye - 1,
+                                               color_white, false);
+                        }
+                    }
+                }
+            }
+        }
+
+        return img;
     }
 }

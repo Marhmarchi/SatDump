@@ -224,11 +224,11 @@ namespace fy4
                             ImGui::BeginGroup();
                             ImGui::Button("Status", {200 * ui_scale, 20 * ui_scale});
                             if (dec->imageStatus == SAVING)
-                                ImGui::TextColored(IMCOLOR_SYNCED, "Writing image...");
+                                ImGui::TextColored(style::theme.green, "Writing image...");
                             else if (dec->imageStatus == RECEIVING)
-                                ImGui::TextColored(IMCOLOR_SYNCING, "Receiving...");
+                                ImGui::TextColored(style::theme.orange, "Receiving...");
                             else
-                                ImGui::TextColored(IMCOLOR_NOSYNC, "Idle (Image)...");
+                                ImGui::TextColored(style::theme.red, "Idle (Image)...");
                             ImGui::EndGroup();
                             ImGui::EndTabItem();
                         }
@@ -243,7 +243,7 @@ namespace fy4
                         ImGui::SameLine();
                         ImGui::BeginGroup();
                         ImGui::Button("Status", {200 * ui_scale, 20 * ui_scale});
-                        ImGui::TextColored(IMCOLOR_NOSYNC, "Idle (Image)...");
+                        ImGui::TextColored(style::theme.red, "Idle (Image)...");
                         ImGui::EndGroup();
                         ImGui::EndTabItem();
                     }
@@ -252,7 +252,7 @@ namespace fy4
             ImGui::EndTabBar();
 
             if (!streamingInput)
-                ImGui::ProgressBar((double)progress / (double)filesize, ImVec2(ImGui::GetWindowWidth() - 10, 20 * ui_scale));
+                ImGui::ProgressBar((double)progress / (double)filesize, ImVec2(ImGui::GetContentRegionAvail().x, 20 * ui_scale));
 
             ImGui::End();
         }

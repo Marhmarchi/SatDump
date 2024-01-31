@@ -1,7 +1,7 @@
 #include "module_dvbs_demod.h"
 #include "common/dsp/filter/firdes.h"
 #include "logger.h"
-#include "imgui/imgui.h"
+#include "common/widgets/themed_widgets.h"
 #include "dvbs/dvbs_interleaving.h"
 #include "dvbs/dvbs_reedsolomon.h"
 #include "dvbs/dvbs_scrambling.h"
@@ -245,7 +245,7 @@ namespace dvb
             {
                 ImGui::Text("Freq : ");
                 ImGui::SameLine();
-                ImGui::TextColored(IMCOLOR_SYNCING, "%.0f Hz", display_freq);
+                ImGui::TextColored(style::theme.orange, "%.0f Hz", display_freq);
             }
             snr_plot.draw(snr, peak_snr);
             if (!streamingInput)
@@ -275,18 +275,19 @@ namespace dvb
                     rate = "7/8";
 
                 if (viterbi.getState() == 0)
-                    ImGui::TextColored(IMCOLOR_NOSYNC, "NOSYNC");
+                    ImGui::TextColored(style::theme.red, "NOSYNC");
                 else
-                    ImGui::TextColored(IMCOLOR_SYNCED, "SYNCED %s", rate.c_str());
+                    ImGui::TextColored(style::theme.green, "SYNCED %s", rate.c_str());
 
                 ImGui::Text("BER   : ");
                 ImGui::SameLine();
-                ImGui::TextColored(viterbi.getState() == 0 ? IMCOLOR_NOSYNC : IMCOLOR_SYNCED, UITO_C_STR(ber));
+                ImGui::TextColored(viterbi.getState() == 0 ? style::theme.red : style::theme.green, UITO_C_STR(ber));
 
                 std::memmove(&ber_history[0], &ber_history[1], (200 - 1) * sizeof(float));
                 ber_history[200 - 1] = ber;
 
-                ImGui::PlotLines("", ber_history, IM_ARRAYSIZE(ber_history), 0, "", 0.0f, 1.0f, ImVec2(200 * ui_scale, 50 * ui_scale));
+                widgets::ThemedPlotLines(style::theme.plot_bg.Value, "", ber_history, IM_ARRAYSIZE(ber_history), 0, "", 0.0f, 1.0f,
+                    ImVec2(200 * ui_scale, 50 * ui_scale));
             }
 
             ImGui::Spacing();
@@ -299,18 +300,18 @@ namespace dvb
                     ImGui::SameLine();
 
                     if (errors[i] == -1)
-                        ImGui::TextColored(IMCOLOR_NOSYNC, "%i ", i);
+                        ImGui::TextColored(style::theme.red, "%i ", i);
                     else if (errors[i] > 0)
-                        ImGui::TextColored(IMCOLOR_SYNCING, "%i ", i);
+                        ImGui::TextColored(style::theme.orange, "%i ", i);
                     else
-                        ImGui::TextColored(IMCOLOR_SYNCED, "%i ", i);
+                        ImGui::TextColored(style::theme.green, "%i ", i);
                 }
             }
         }
         ImGui::EndGroup();
 
         if (!streamingInput)
-            ImGui::ProgressBar((double)progress / (double)filesize, ImVec2(ImGui::GetWindowWidth() - 10, 20 * ui_scale));
+            ImGui::ProgressBar((double)progress / (double)filesize, ImVec2(ImGui::GetContentRegionAvail().x, 20 * ui_scale));
 
         drawStopButton();
 

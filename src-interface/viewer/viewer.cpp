@@ -171,15 +171,16 @@ namespace satdump
             ImGui::Text("  ");
             ImGui::SameLine();
 
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(255, 0, 0, 255));
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+            ImGui::PushStyleColor(ImGuiCol_Text, style::theme.red.Value);
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4());
+            ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0);
             if (ImGui::SmallButton(std::string(u8"\uf00d##" + ph.dataset_name + label).c_str()))
             {
                 logger->info("Closing products " + label);
                 ph.marked_for_close = true;
             }
-            ImGui::PopStyleColor();
-            ImGui::PopStyleColor();
+            ImGui::PopStyleVar();
+            ImGui::PopStyleColor(2);
         }
 
         ImRect rect = ImRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
@@ -225,8 +226,9 @@ namespace satdump
                                 ImGui::Text("  ");
                                 ImGui::SameLine();
 
-                                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(255, 0, 0, 255));
-                                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+                                ImGui::PushStyleColor(ImGuiCol_Text, style::theme.red.Value);
+                                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4());
+                                ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0);
                                 if (ImGui::SmallButton(std::string(u8"\uf00d##dataset" + dataset_name).c_str()))
                                 {
                                     logger->info("Closing datset " + dataset_name);
@@ -240,8 +242,8 @@ namespace satdump
                                                 products_and_handlers[i]->marked_for_close = true;
                                         }
                                 }
-                                ImGui::PopStyleColor();
-                                ImGui::PopStyleColor();
+                                ImGui::PopStyleVar();
+                                ImGui::PopStyleColor(2);
                             }
 
                             const ImColor TreeLineColor = ImColor(128, 128, 128, 255); // ImGui::GetColorU32(ImGuiCol_Text);
@@ -379,12 +381,6 @@ namespace satdump
             {
                 if (products_and_handlers.size() > 0)
                     products_and_handlers[current_handler_id]->handler->drawContents({float(right_width - 4), float(viewer_size.y)});
-                else
-                    ImGui::GetWindowDrawList()
-                        ->AddRectFilled(ImGui::GetCursorScreenPos(),
-                                        ImVec2(ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x,
-                                               ImGui::GetCursorScreenPos().y + ImGui::GetContentRegionAvail().y),
-                                        ImColor::HSV(0, 0, 0));
             }
             else if (current_selected_tab == 1)
             {

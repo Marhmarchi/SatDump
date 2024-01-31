@@ -1,6 +1,6 @@
 #include "module_ccsds_turbo_decoder.h"
 #include "logger.h"
-#include "imgui/imgui.h"
+#include "common/widgets/themed_widgets.h"
 #include "common/utils.h"
 #include "common/codings/rotation.h"
 #include "common/codings/randomization.h"
@@ -282,25 +282,26 @@ namespace ccsds
             {
                 ImGui::Text("Corr  : ");
                 ImGui::SameLine();
-                ImGui::TextColored(locked ? IMCOLOR_SYNCED : IMCOLOR_SYNCING, UITO_C_STR(cor));
+                ImGui::TextColored(locked ? style::theme.green : style::theme.orange, UITO_C_STR(cor));
 
                 std::memmove(&cor_history[0], &cor_history[1], (200 - 1) * sizeof(float));
                 cor_history[200 - 1] = cor;
 
-                ImGui::PlotLines("", cor_history, IM_ARRAYSIZE(cor_history), 0, "", 0.0f, 100.0f, ImVec2(200 * ui_scale, 50 * ui_scale));
+                widgets::ThemedPlotLines(style::theme.plot_bg.Value, "", cor_history, IM_ARRAYSIZE(cor_history), 0, "", 0.0f, 100.0f,
+                    ImVec2(200 * ui_scale, 50 * ui_scale));
             }
 
             ImGui::Button("CRC Check", {200 * ui_scale, 20 * ui_scale});
             {
                 ImGui::Text("Check  : ");
                 ImGui::SameLine();
-                ImGui::TextColored(crc_lock ? IMCOLOR_SYNCED : IMCOLOR_SYNCING, crc_lock ? "PASS" : "FAIL");
+                ImGui::TextColored(crc_lock ? style::theme.green : style::theme.orange, crc_lock ? "PASS" : "FAIL");
             }
         }
         ImGui::EndGroup();
 
         if (!streamingInput)
-            ImGui::ProgressBar((double)progress / (double)filesize, ImVec2(ImGui::GetWindowWidth() - 10, 20 * ui_scale));
+            ImGui::ProgressBar((double)progress / (double)filesize, ImVec2(ImGui::GetContentRegionAvail().x, 20 * ui_scale));
 
         ImGui::End();
     }

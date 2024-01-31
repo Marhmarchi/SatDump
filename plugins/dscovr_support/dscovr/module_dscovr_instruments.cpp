@@ -109,7 +109,7 @@ namespace dscovr
                     ImGui::TableSetColumnIndex(0);
                     ImGui::Text("EPIC %d", i + 1);
                     ImGui::TableSetColumnIndex(1);
-                    ImGui::TextColored(ImColor(0, 255, 0), "%d", epic_reader.img_c);
+                    ImGui::TextColored(style::theme.green, "%d", epic_reader.img_c);
                     ImGui::TableSetColumnIndex(2);
                     drawStatus(epic_status);
                 }
@@ -117,7 +117,7 @@ namespace dscovr
                 ImGui::EndTable();
             }
 
-            ImGui::ProgressBar((double)progress / (double)filesize, ImVec2(ImGui::GetWindowWidth() - 10, 20 * ui_scale));
+            ImGui::ProgressBar((double)progress / (double)filesize, ImVec2(ImGui::GetContentRegionAvail().x, 20 * ui_scale));
 
             ImGui::End();
         }

@@ -205,7 +205,7 @@ namespace elektro_arktika
                     ImGui::TableSetColumnIndex(0);
                     ImGui::Text("Channel %d", i + 1);
                     ImGui::TableSetColumnIndex(1);
-                    ImGui::TextColored(ImColor(0, 255, 0), "%d", frames);
+                    ImGui::TextColored(style::theme.green, "%d", frames);
                     ImGui::TableSetColumnIndex(2);
                     drawStatus(channels_statuses[i]);
                 }
@@ -213,7 +213,7 @@ namespace elektro_arktika
                 ImGui::EndTable();
             }
 
-            ImGui::ProgressBar((double)progress / (double)filesize, ImVec2(ImGui::GetWindowWidth() - 10, 20 * ui_scale));
+            ImGui::ProgressBar((double)progress / (double)filesize, ImVec2(ImGui::GetContentRegionAvail().x, 20 * ui_scale));
 
             ImGui::End();
         }

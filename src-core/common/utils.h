@@ -202,3 +202,8 @@ inline double getTime()
 std::string loadFileToString(std::string path);
 std::string ws2s(const std::wstring &wstr);
 std::wstring s2ws(const std::string &str);
+
+std::string prepareAutomatedPipelineFolder(time_t timevalue, double frequency, std::string pipeline_name, std::string folder = "");
+std::string prepareBasebandFileName(double timeValue_precise, uint64_t samplerate, uint64_t frequency);
+
+void hsv_to_rgb(float h, float s, float v, uint8_t *rgb);

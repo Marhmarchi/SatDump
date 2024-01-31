@@ -143,7 +143,7 @@ namespace scisat1
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("FTS");
                 ImGui::TableSetColumnIndex(1);
-                ImGui::TextColored(ImColor(0, 255, 0), "%d", fts_reader.lines);
+                ImGui::TextColored(style::theme.green, "%d", fts_reader.lines);
                 ImGui::TableSetColumnIndex(2);
                 drawStatus(fts_status);
 
@@ -151,7 +151,7 @@ namespace scisat1
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("MAESTRO Mode 1");
                 ImGui::TableSetColumnIndex(1);
-                ImGui::TextColored(ImColor(0, 255, 0), "%d", maestro_reader.lines_1);
+                ImGui::TextColored(style::theme.green, "%d", maestro_reader.lines_1);
                 ImGui::TableSetColumnIndex(2);
                 drawStatus(maestro_status);
 
@@ -159,14 +159,14 @@ namespace scisat1
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("MAESTRO Mode 2");
                 ImGui::TableSetColumnIndex(1);
-                ImGui::TextColored(ImColor(0, 255, 0), "%d", maestro_reader.lines_2);
+                ImGui::TextColored(style::theme.green, "%d", maestro_reader.lines_2);
                 ImGui::TableSetColumnIndex(2);
                 drawStatus(maestro_status);
 
                 ImGui::EndTable();
             }
 
-            ImGui::ProgressBar((double)progress / (double)filesize, ImVec2(ImGui::GetWindowWidth() - 10, 20 * ui_scale));
+            ImGui::ProgressBar((double)progress / (double)filesize, ImVec2(ImGui::GetContentRegionAvail().x, 20 * ui_scale));
 
             ImGui::End();
         }

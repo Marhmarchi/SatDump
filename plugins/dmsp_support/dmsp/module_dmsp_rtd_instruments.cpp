@@ -126,7 +126,7 @@ namespace dmsp
             ImGui::TableSetColumnIndex(0);
             ImGui::Text("OLS");
             ImGui::TableSetColumnIndex(1);
-            ImGui::TextColored(ImColor(0, 255, 0), "%d", ols_reader.lines);
+            ImGui::TextColored(style::theme.green, "%d", ols_reader.lines);
             ImGui::TableSetColumnIndex(2);
             drawStatus(ols_status);
 
@@ -134,7 +134,7 @@ namespace dmsp
         }
 
         if (!streamingInput)
-            ImGui::ProgressBar((double)progress / (double)filesize, ImVec2(ImGui::GetWindowWidth() - 10, 20 * ui_scale));
+            ImGui::ProgressBar((double)progress / (double)filesize, ImVec2(ImGui::GetContentRegionAvail().x, 20 * ui_scale));
 
         ImGui::End();
     }

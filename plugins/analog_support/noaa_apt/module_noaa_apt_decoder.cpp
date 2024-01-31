@@ -816,6 +816,7 @@ namespace noaa_apt
         apt_status = DONE;
 
         dataset.save(d_output_file_hint.substr(0, d_output_file_hint.rfind('/')));
+        d_output_files.push_back(d_output_file_hint.substr(0, d_output_file_hint.rfind('/')) + "/dataset.json");
     }
 
     image::Image<uint16_t> NOAAAPTDecoderModule::synchronize(int line_cnt)
@@ -1064,7 +1065,7 @@ namespace noaa_apt
         ImGui::EndGroup();
 
         if (input_data_type == DATA_FILE)
-            ImGui::ProgressBar((double)progress / (double)filesize, ImVec2(ImGui::GetWindowWidth() - 10, 20 * ui_scale));
+            ImGui::ProgressBar((double)progress / (double)filesize, ImVec2(ImGui::GetContentRegionAvail().x, 20 * ui_scale));
 
         ImGui::End();
     }

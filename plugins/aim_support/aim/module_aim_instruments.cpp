@@ -127,7 +127,7 @@ namespace aim
                     ImGui::TableSetColumnIndex(0);
                     ImGui::Text("CIPS %d", i + 1);
                     ImGui::TableSetColumnIndex(1);
-                    ImGui::TextColored(ImColor(0, 255, 0), "%d", (int)cips_readers[i].images.size());
+                    ImGui::TextColored(style::theme.green, "%d", (int)cips_readers[i].images.size());
                     ImGui::TableSetColumnIndex(2);
                     drawStatus(cips_status[i]);
                 }
@@ -135,7 +135,7 @@ namespace aim
                 ImGui::EndTable();
             }
 
-            ImGui::ProgressBar((double)progress / (double)filesize, ImVec2(ImGui::GetWindowWidth() - 10, 20 * ui_scale));
+            ImGui::ProgressBar((double)progress / (double)filesize, ImVec2(ImGui::GetContentRegionAvail().x, 20 * ui_scale));
 
             ImGui::End();
         }

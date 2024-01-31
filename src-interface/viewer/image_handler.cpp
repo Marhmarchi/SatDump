@@ -165,7 +165,7 @@ namespace satdump
         if (overlay_handler.enabled())
         {
             // Ensure this is RGB!!
-            if(current_image.channels() < 3)
+            if (current_image.channels() < 3)
                 current_image.to_rgb();
             nlohmann::json proj_cfg = products->get_proj_cfg();
             proj_cfg["metadata"] = current_proj_metadata;
@@ -180,9 +180,9 @@ namespace satdump
             {
                 overlay_handler.clear_cache();
                 proj_func = satdump::reprojection::setupProjectionFunction(pre_corrected_width,
-                    pre_corrected_height,
-                    proj_cfg,
-                    !do_correction && rotate_image);
+                                                                           pre_corrected_height,
+                                                                           proj_cfg,
+                                                                           !do_correction && rotate_image);
 
                 if (do_correction)
                 {
@@ -193,21 +193,21 @@ namespace satdump
 
                     std::function<std::pair<int, int>(float, float, int, int)> newfun =
                         [proj_func, corrected_stuff, fwidth, fheight, rotate](float lat, float lon, int map_height, int map_width) mutable -> std::pair<int, int>
+                    {
+                        std::pair<int, int> ret = proj_func(lat, lon, map_height, map_width);
+                        if (ret.first != -1 && ret.second != -1 && ret.first < (int)corrected_stuff.size() && ret.first >= 0)
                         {
-                            std::pair<int, int> ret = proj_func(lat, lon, map_height, map_width);
-                            if (ret.first != -1 && ret.second != -1 && ret.first < (int)corrected_stuff.size() && ret.first >= 0)
+                            ret.first = corrected_stuff[ret.first];
+                            if (rotate)
                             {
-                                ret.first = corrected_stuff[ret.first];
-                                if (rotate)
-                                {
-                                    ret.first = (fwidth - 1) - ret.first;
-                                    ret.second = (fheight - 1) - ret.second;
-                                }
+                                ret.first = (fwidth - 1) - ret.first;
+                                ret.second = (fheight - 1) - ret.second;
                             }
-                            else
-                                ret.second = ret.first = -1;
-                            return ret;
-                        };
+                        }
+                        else
+                            ret.second = ret.first = -1;
+                        return ret;
+                    };
                     proj_func = newfun;
                 }
 
@@ -386,16 +386,14 @@ namespace satdump
 
             if (products->has_calibation() && active_channel_id >= 0 && products->get_wavenumber(active_channel_id) != -1)
             {
+                ImVec4* colors = ImGui::GetStyle().Colors;
+                int to_pop = 0;
                 ImGui::SameLine();
                 if (range_window && active_channel_calibrated)
                 {
-                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.165, 0.31, 0.51, 1.0f));
-                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.22, 0.482, 0.796, 1.0f));
-                }
-                else
-                {
-                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.216, 0.216, 0.216, 1.0f));
-                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.235, 0.235, 0.235, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_Button, colors[ImGuiCol_TabActive]);
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, colors[ImGuiCol_TabHovered]);
+                    to_pop += 2;
                 }
                 if (!active_channel_calibrated)
                     ImGui::BeginDisabled();
@@ -403,16 +401,14 @@ namespace satdump
                     range_window = !range_window;
                 if (ImGui::IsItemHovered())
                     ImGui::SetTooltip("Diaplay Range Control");
+                ImGui::PopStyleColor(to_pop);
+                to_pop = 0;
 
                 if (show_scale && active_channel_calibrated)
                 {
-                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.165, 0.31, 0.51, 1.0f));
-                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.22, 0.482, 0.796, 1.0f));
-                }
-                else
-                {
-                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.216, 0.216, 0.216, 1.0f));
-                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.235, 0.235, 0.235, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_Button, colors[ImGuiCol_TabActive]);
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, colors[ImGuiCol_TabHovered]);
+                    to_pop += 2;
                 }
                 if (!products->get_calibration_type(active_channel_id))
                     ImGui::BeginDisabled();
@@ -421,11 +417,11 @@ namespace satdump
                     show_scale = !show_scale;
                 if (!products->get_calibration_type(active_channel_id))
                     ImGui::EndDisabled();
+                ImGui::PopStyleColor(to_pop);
+                to_pop = 0;
 
                 if (!active_channel_calibrated)
                     ImGui::EndDisabled();
-
-                ImGui::PopStyleColor(4);
 
                 if (ImGui::IsItemHovered())
                     ImGui::SetTooltip("Show Scale");
@@ -562,7 +558,7 @@ namespace satdump
                     if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
                     {
                         ImGui::BeginTooltip();
-                        ImGui::TextColored(ImColor(255, 0, 0), "Disable projection!");
+                        ImGui::TextColored(style::theme.red, "Disable projection!");
                         ImGui::EndTooltip();
                     }
                 }
@@ -636,7 +632,7 @@ namespace satdump
                     if (preset_search_str.size() != 0)
                         show = isStringPresent(rgb_presets[i].first, preset_search_str);
 
-                    if (show && ImGui::Selectable(rgb_presets[i].first.c_str(), i == select_rgb_presets))
+                    if (show && ImGui::Selectable(rgb_presets[i].first.c_str(), (int)i == select_rgb_presets))
                     {
                         select_rgb_presets = i;
                         rgb_compo_cfg = rgb_presets[select_rgb_presets].second;
@@ -748,19 +744,19 @@ namespace satdump
                 {
                     ImGui::BeginTooltip();
                     if (current_timestamps.size() == 0)
-                        ImGui::TextColored(ImColor(255, 0, 0), "No timestamps!");
+                        ImGui::TextColored(style::theme.red, "No timestamps!");
                     else if (correct_image)
-                        ImGui::TextColored(ImColor(255, 0, 0), "Disable correction!");
+                        ImGui::TextColored(style::theme.red, "Disable correction!");
                     else
-                        ImGui::TextColored(ImColor(255, 255, 0), "The old algorithm will\n"
-                                                                 "deal with very bad (noisy) data\n"
-                                                                 "better.\n"
-                                                                 "The new one is preferred if\n"
-                                                                 "possible though, as results\n"
-                                                                 "are a lot nicer! :-)\n"
-                                                                 "If you had to use this\n"
-                                                                 "and the data was not that bad\n"
-                                                                 "please report as a bug!");
+                        ImGui::TextColored(style::theme.yellow, "The old algorithm will\n"
+                                                                "deal with very bad (noisy) data\n"
+                                                                "better.\n"
+                                                                "The new one is preferred if\n"
+                                                                "possible though, as results\n"
+                                                                "are a lot nicer! :-)\n"
+                                                                "If you had to use this\n"
+                                                                "and the data was not that bad\n"
+                                                                "please report as a bug!");
 
                     ImGui::EndTooltip();
                 }

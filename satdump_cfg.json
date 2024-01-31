@@ -47,11 +47,8 @@
         //
         //
         // Other settings. We utilize the same parameter system, easier that way :-)
-        "light_theme": {
-            "type": "bool",
-            "value": false,
-            "name": "Light UI Theme",
-            "description": "This enables a more classic white-based UI theme, making the UI more usable in the sun on a dimmer display or simply easier to read if you don't prefer the Dark theme"
+        "theme": {
+            "value": "Dark"
         },
         "manual_dpi_scaling": {
             "type": "float",
@@ -584,6 +581,7 @@
                         "channels": "cch4",
                         "lua": "scripted_compos/underlay_with_clouds.lua",
                         "description": "descriptions/MCIR.md",
+                        "equalize": true,
                         "lua_vars": {
                             "minoffset": 0.05,
                             "scalar": 1.1,
@@ -1148,7 +1146,7 @@
                         }
                     },
                     "124": {
-                        "equation": "ch1, ch2, ch4",
+                        "equation": "ch1, ch2, 1-ch4",
                         "description": "descriptions/124.md",
                         "geo_correct": true,
                         "white_balance": true,
@@ -1219,6 +1217,7 @@
                         "channels": "ch4",
                         "lua": "scripted_compos/underlay_with_clouds.lua",
                         "description": "descriptions/MCIR.md",
+                        "equalize": true,
                         "lua_vars": {
                             "minoffset": 0.45,
                             "scalar": 2.6,

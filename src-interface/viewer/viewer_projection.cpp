@@ -175,7 +175,7 @@ namespace satdump
                     {
                         ImGui::SliderInt("Zoom##osmsliderzoom", &projection_osm_zoom, 0, 6);
                         if (!urlgood)
-                            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(255, 0, 0, 255));
+                            ImGui::PushStyleColor(ImGuiCol_Text, style::theme.red.Value);
 
                         ImGui::InputText("Tile URL", &mapurl, ImGuiInputTextFlags_None);
 
@@ -309,8 +309,9 @@ namespace satdump
                         // Closing button
                         ImGui::SameLine();
                         ImGui::SetCursorPosY(ImGui::GetCursorPos().y - 2 * ui_scale);
-                        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(255, 0, 0, 255));
-                        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+                        ImGui::PushStyleColor(ImGuiCol_Text, style::theme.red.Value);
+                        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4());
+                        ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0);
                         if (ImGui::Button(std::string(u8"\uf00d##layerdelete" + layer.name + std::to_string(i)).c_str()))
                         {
                             if (layer.type == 1 || layer.type == 2)
@@ -326,16 +327,16 @@ namespace satdump
                                 layer.viewer_prods->handler->setShouldProject(false);
                             }
                             refreshProjectionLayers();
+                            ImGui::PopStyleVar();
+                            ImGui::PopStyleColor(2);
                             ImGui::EndGroup();
-                            ImGui::PopStyleColor();
-                            ImGui::PopStyleColor();
                             ImGui::PopID();
                             break;
                         }
                         if (projections_are_generating && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
                             ImGui::SetTooltip("Wait for the processing to finish!");
-                        ImGui::PopStyleColor();
-                        ImGui::PopStyleColor();
+                        ImGui::PopStyleVar();
+                        ImGui::PopStyleColor(2);
                         if (disable_buttons)
                             ImGui::EndDisabled();
                     }

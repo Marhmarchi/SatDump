@@ -251,14 +251,14 @@ namespace meteor
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("MTVZA");
                 ImGui::TableSetColumnIndex(1);
-                ImGui::TextColored(ImColor(0, 255, 0), "%d", mtvza_lines);
+                ImGui::TextColored(style::theme.green, "%d", mtvza_lines);
                 ImGui::TableSetColumnIndex(2);
                 drawStatus(mtvza_status);
 
                 ImGui::EndTable();
             }
 
-            ImGui::ProgressBar((double)progress / (double)filesize, ImVec2(ImGui::GetWindowWidth() - 10, 20 * ui_scale));
+            ImGui::ProgressBar((double)progress / (double)filesize, ImVec2(ImGui::GetContentRegionAvail().x, 20 * ui_scale));
 
             ImGui::End();
         }
