@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common/dsp/resamp/smart_resampler.h"
 #include "modules/demod/module_demod_base.h"
 #include "nlohmann/json.hpp"
 #include "common/dsp/filter/fir.h"
@@ -8,6 +9,7 @@
 #include "common/dsp/fft/fft_pan.h"
 #include "common/widgets/fft_plot.h"
 #include "common/dsp/path/splitter.h"
+#include <complex.h>
 #include <memory>
 
 
@@ -23,6 +25,7 @@ namespace analysis
 			double d_transition_bw;
 			//long d_samplerate;
 
+			//std::shared_ptr<dsp::SmartResamplerBlock<complex_t>> smart_res;
 			std::shared_ptr<dsp::RationalResamplerBlock<complex_t>> res;
 			std::shared_ptr<dsp::FIRBlock<complex_t>> lpf;
 			//std::shared_ptr<dsp::AGC2Block<complex_t>> agc2;
@@ -33,6 +36,10 @@ namespace analysis
 			std::shared_ptr<dsp::SplitterBlock> fft_splitter;
 			std::shared_ptr<dsp::FFTPanBlock> fft_proc;
 			std::shared_ptr<widgets::FFTPlot> fft_plot;
+
+			//std::shared_ptr<dsp::SplitterBlock> fft_splitter;
+			//std::shared_ptr<dsp::FFTPanBlock> fft_proc;
+			//std::shared_ptr<widgets::FFTPlot> fft_plot;
 			//bool fft_is_enabled = true;
 
 			void drawAnaFFT();

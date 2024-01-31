@@ -1,6 +1,9 @@
 #include "module_analysis_psk.h"
+#include "common/dsp/fft/fft_pan.h"
 #include "common/dsp/io/wav_writer.h"
+#include "common/dsp/path/splitter.h"
 #include "common/utils.h"
+#include "common/widgets/fft_plot.h"
 #include "core/module.h"
 #include "logger.h"
 #include "imgui/imgui.h"
@@ -10,6 +13,7 @@
 #include <cstdint>
 #include <fstream>
 #include <memory>
+#include <stdexcept>
 #include <volk/volk.h>
 #include <volk/volk_complex.h>
 
@@ -18,17 +22,27 @@
 namespace analysis
 {
 	AnalysisPsk::AnalysisPsk(std::string input_file, std::string output_file_hint, nlohmann::json parameters)
-		: BaseDemodModule(input_file, output_file_hint, parameters),
-		d_cutoff_freq(parameters["cutoff_freq"].get<double>()),
-		d_transition_bw(parameters["transition_bw"].get<double>())
+		: BaseDemodModule(input_file, output_file_hint, parameters)//,
+		//d_cutoff_freq(parameters["cutoff_freq"].get<double>()),
+		//d_transition_bw(parameters["transition_bw"].get<double>())
 		//d_samplerate(parameters["samplerate"].get<long>())
 	{
+		if (parameters.count("cutoff_freq") >0)
+			d_cutoff_freq = parameters["cutoff_freq"].get<double>();
+		else
+			throw std::runtime_error("Cutoff frequency must be present!");
+
+		if (parameters.count("transition_bw") >0)
+			d_transition_bw = parameters["transition_bw"].get<double>();
+		else
+			throw std::runtime_error("Transition bandwidth must be present!");
+
+
 		show_freq = true;
-		//input_buffer = new complex_t[BUFFER_SIZE];
-		//output_buffer = new complex_t[BUFFER_SIZE];
 		
 		MIN_SPS = 1;
 		MAX_SPS = 1000.0;
+
 	}
 
 	void AnalysisPsk::init()
@@ -40,6 +54,16 @@ namespace analysis
 
 		// Low pass filter
 		lpf = std::make_shared<dsp::FIRBlock<complex_t>>(agc->output_stream, dsp::firdes::low_pass(1.0, d_symbolrate, d_cutoff_freq, d_transition_bw));
+
+		fft_splitter = std::make_shared<dsp::SplitterBlock>(lpf->output_stream);
+		fft_splitter->add_output("lowPassFilter");
+		fft_splitter->set_enabled("lowPassFilter", true);
+
+		fft_proc = std::make_shared<dsp::FFTPanBlock>(fft_splitter->get_output("lowPassFilter"));
+		fft_proc->set_fft_settings(8192, final_samplerate, 120);
+		fft_proc->avg_num = 10;
+		fft_plot = std::make_shared<widgets::FFTPlot>(fft_proc->output_stream->writeBuf, 8192, -10, 20, 10);
+
 	}
 
 	AnalysisPsk::~AnalysisPsk()
@@ -59,20 +83,6 @@ namespace analysis
 			d_output_files.push_back(d_output_file_hint + ".f32");
 		}
 	
-		//std::ifstream data_in;
-
-		//{
-		//	data_out = std::ofstream(d_output_file_hint + ".f32", std::ios::binary);
-		//	d_output_files.push_back(d_output_file_hint + ".f32");
-		//}
-
-		//else
-		//	filesize = 0;
-
-		//if (input_data_type == DATA_FILE)
-		//{
-		//}
-
 		logger->info("Using input baseband" + d_input_file);
 		logger->info("Saving processed to " + d_output_file_hint + ".f32");
 		logger->info("Buffer size : " + std::to_string(d_buffer_size));
@@ -83,18 +93,32 @@ namespace analysis
 		BaseDemodModule::start();
 		//res->start();
 		lpf->start();
-		//fft_splitter->start();
-		//fft_proc->start();
+		fft_splitter->start();
+		fft_proc->start();
 
 		//Buffer
-		complex_t *output_buffer = new complex_t[d_buffer_size * 100];
+		complex_t *output_buffer = new complex_t[d_buffer_size * 200];
 		//complex_t *input_buffer = new complex_t[d_buffer_size];
-		complex_t *fc_buffer = new complex_t[d_buffer_size * 100];
+		complex_t *fc_buffer = new complex_t[d_buffer_size * 200];
+
+		complex_t *expTwo_output = new complex_t[d_buffer_size * 200];
+		complex_t *expFour_output = new complex_t[d_buffer_size * 200];
+		complex_t *expEight_output = new complex_t[d_buffer_size * 200];
+
+		complex_t *multConj_output = new complex_t[d_buffer_size * 200];
+		float *compMag_output = new float[d_buffer_size * 100];
+
+		complex_t *delayed_output = new complex_t[d_buffer_size * 200];
+		complex_t *not_delayed_output = new complex_t[d_buffer_size * 200];
+
+		complex_t last_samp = 0;
 
 		//float *real_buffer = new float[d_buffer_size * 100];
 
 		float *imag = new float[d_buffer_size * 100];
 		float *real = new float[d_buffer_size * 100];
+
+		int exponent = 2;
 
 		//int16_t *output_wav_buffer = new int16_t[d_buffer_size * 100];
 		int final_data_size = 0;
@@ -120,52 +144,54 @@ namespace analysis
 			{
 				imag[i] = lpf->output_stream->readBuf[i].imag;
 				real[i] = lpf->output_stream->readBuf[i].real;
-				//output_stream->writeBuf[i] = complex_t(real, imag);
 			}
 			
-			volk_32f_x2_interleave_32fc((lv_32fc_t *)fc_buffer, (float *)real, (float *)imag, dat_size * sizeof(complex_t));
+			// F32 to CF32
+			volk_32f_x2_interleave_32fc((lv_32fc_t *)fc_buffer, (float *)real, (float *)imag, dat_size/* * sizeof(complex_t)*/);
 
-			
+			// Exponentiate
+			volk_32fc_x2_multiply_32fc((lv_32fc_t *)expTwo_output, (lv_32fc_t *)fc_buffer, (lv_32fc_t *)fc_buffer, dat_size);
+			for (int i = 2; i < exponent; i++) {
+				volk_32fc_x2_multiply_32fc((lv_32fc_t *)expTwo_output, (lv_32fc_t *)fc_buffer, (lv_32fc_t *)fc_buffer, dat_size);
+			}
+
+
+			// Delay 1 sample
 			//for (int i = 0; i < dat_size; i++)
 			//{
-				//real_buffer = &lpf->output_stream->readBuf[i].real;
-
-				//volk_32f_x2_interleave_32fc((lv_32fc_t *)fc_buffer, &lpf->output_stream->readBuf[i].real, &lpf->output_stream->readBuf[i].imag, dat_size * sizeof(complex_t));
+			//	delayed_output[i] = i == 0 ? last_samp : fc_buffer[i - 1];
+			//	not_delayed_output[i] = fc_buffer[i];
 			//}
 
+			//last_samp = fc_buffer[dat_size - 1];
 
-			volk_32fc_x2_multiply_32fc((lv_32fc_t *)output_buffer, (lv_32fc_t *)fc_buffer, (lv_32fc_t *)fc_buffer, dat_size);
+			// Multiply conjugate
+			//volk_32fc_x2_multiply_conjugate_32fc((lv_32fc_t *)multConj_output, (lv_32fc_t *)not_delayed_output, (lv_32fc_t *)delayed_output, dat_size);
+			// Complex to Mag
+			//volk_32fc_magnitude_32f((float *)compMag_output, (lv_32fc_t *)multConj_output, dat_size);
 
-			//volk_32fc_x2_multiply_32fc((lv_32fc_t *)output_buffer, (lv_32fc_t *)lpf->output_stream->readBuf, (lv_32fc_t *)lpf->output_stream->readBuf, dat_size);
 
 
 			if (output_data_type == DATA_FILE)
 			{
-				data_out.write((char *)output_buffer, dat_size * sizeof(complex_t));
+				//data_out.write((char *)output_buffer, dat_size * sizeof(complex_t));
+				data_out.write((char *)expTwo_output, dat_size * sizeof(complex_t));
+				//data_out.write((char *)multConj_output, dat_size * sizeof(complex_t));
 				//data_out.write((char *)output_wav_buffer, dat_size * sizeof(int16_t) * 2);
-				//logger->trace("%f", lpf->output_stream->readBuf);
+				logger->trace("%f", lpf->output_stream->readBuf);
 				//final_data_size += dat_size * sizeof(int16_t);
 				final_data_size += dat_size * sizeof(complex_t);
 			}
 			else 
 			{
+				//output_fifo->write((uint8_t *)output_buffer, dat_size * sizeof(complex_t));
+				output_fifo->write((uint8_t *)expTwo_output, dat_size * sizeof(complex_t));
+				//output_fifo->write((uint8_t *)multConj_output, dat_size * sizeof(complex_t));
 				//output_fifo->write((uint8_t *)output_wav_buffer, dat_size * sizeof(int16_t) * 2);
-				output_fifo->write((uint8_t *)output_buffer, dat_size * sizeof(complex_t));
 				logger->trace("%f", lpf->output_stream->readBuf);
 			}
 
 			lpf->output_stream->flush();
-
-			//fft_splitter->start();
-			//fft_proc->start();
-			//fft_splitter->add_output("analysis_fft");
-			//fft_splitter->set_enabled("analysis_fft", true);
-			//fft_proc = std::make_unique<dsp::FFTPanBlock>(fft_splitter->get_output("analysis_fft"));
-                        //
-			//fft_proc->set_fft_settings(8192, d_symbolrate, 120);
-			//fft_proc->avg_num = 50;
-			//fft_plot = std::make_unique<widgets::FFTPlot>(fft_proc->output_stream->writeBuf, 8192, -10, 20, 10);
-			//fft_proc->on_fft = [this](float *v){};
 
 			if (input_data_type == DATA_FILE)
 				progress = file_source->getPosition();
@@ -194,8 +220,8 @@ namespace analysis
 		//res->stop();
 		lpf->stop();
 		lpf->output_stream->stopReader();
-		//fft_proc->stop();
-		//fft_splitter->stop();
+		fft_splitter->stop();
+		fft_proc->stop();
 
 		if (output_data_type == DATA_FILE)
 			data_out.close();
@@ -225,6 +251,7 @@ namespace analysis
 		{
 			if (ImGui::BeginTabItem("Symbol Rate"))
 			{
+				drawAnaFFT();
 				ImGui::EndTabItem();
 			}
 
@@ -237,37 +264,45 @@ namespace analysis
 
 		drawStopButton();
 
+		//drawAnaFFT();
 		ImGui::End();
 
 		drawFFT();
-		//drawAnaFFT();
 	}
 
-	//void AnalysisPsk::drawAnaFFT()
-	//{
-	//	ImGui::SetNextWindowSize({400 * (float)ui_scale, (float)200 * (float)ui_scale});
-	//	if (ImGui::Begin("Testing", NULL, ImGuiWindowFlags_NoScrollbar))
-	//	{
-	//		fft_plot->draw({float(ImGui::GetWindowSize().x - 0), float(ImGui::GetWindowSize().y - 40 * ui_scale) * float(1.0)});
+	
+    void AnalysisPsk::drawAnaFFT()
+        {
+            ImGui::SetNextWindowSize({400 * (float)ui_scale, (float)(400) * (float)ui_scale});
+            if (ImGui::Begin("Baseband FFT", NULL, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoResize))
+            {
+                fft_plot->draw({float(ImGui::GetWindowSize().x - 0), float(ImGui::GetWindowSize().y - 40 * ui_scale) * float(1.0)});
 
-	//		int pos = (abs((float)d_frequency_shift / (float)d_samplerate) * (float)8192) + 819;
-	//		pos %= 8192;
+                // Find "actual" left edge of FFT, before frequency shift.
+                // Inset by 10% (819), then account for > 100% freq shifts via modulo
+                int pos = (abs((float)d_frequency_shift / (float)d_samplerate) * (float)8192) + 819;
+                pos %= 8192;
 
-	//		float min = 1000;
-	//		float max = -1000;
-	//		for (int i = 0; i < 6554; i++)
-	//		{
-	//			if (fft_proc->output_stream->writeBuf[pos] < min)
-	//				min = fft_proc->output_stream->writeBuf[pos];
-	//			if (fft_proc->output_stream->writeBuf[pos] > max)
-	//				max = fft_proc->output_stream->writeBuf[pos];
-	//			pos++;
-	//			if (pos >= 8192)
-	//				pos = 0;
-	//		}
-	//	}
-	//	ImGui::End();
-	//}
+                // Compute min and max of the middle 80% of original baseband
+                float min = 1000;
+                float max = -1000;
+                for (int i = 0; i < 6554; i++) // 8192 * 80% = 6554
+                {
+                    if (fft_proc->output_stream->writeBuf[pos] < min)
+                        min = fft_proc->output_stream->writeBuf[pos];
+                    if (fft_proc->output_stream->writeBuf[pos] > max)
+                        max = fft_proc->output_stream->writeBuf[pos];
+                    pos++;
+                    if (pos >= 8192)
+                        pos = 0;
+                }
+
+            }
+
+            ImGui::End();
+        }
+
+
 
 	std::string AnalysisPsk::getID()
 	{
