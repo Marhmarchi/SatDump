@@ -89,7 +89,7 @@ namespace analysis
 		//Buffer
 		complex_t *output_buffer = new complex_t[d_buffer_size * 100];
 		//complex_t *input_buffer = new complex_t[d_buffer_size];
-		//complex_t *fc_buffer = new complex_t[d_buffer_size * 100];
+		complex_t *fc_buffer = new complex_t[d_buffer_size * 100];
 
 		//float *real_buffer = new float[d_buffer_size * 100];
 
@@ -123,7 +123,7 @@ namespace analysis
 				//output_stream->writeBuf[i] = complex_t(real, imag);
 			}
 			
-			volk_32f_x2_interleave_32fc((lv_32fc_t *)output_buffer, (float *)real, (float *)imag, dat_size * sizeof(complex_t));
+			volk_32f_x2_interleave_32fc((lv_32fc_t *)fc_buffer, (float *)real, (float *)imag, dat_size * sizeof(complex_t));
 
 			
 			//for (int i = 0; i < dat_size; i++)
@@ -132,6 +132,9 @@ namespace analysis
 
 				//volk_32f_x2_interleave_32fc((lv_32fc_t *)fc_buffer, &lpf->output_stream->readBuf[i].real, &lpf->output_stream->readBuf[i].imag, dat_size * sizeof(complex_t));
 			//}
+
+
+			volk_32fc_x2_multiply_32fc((lv_32fc_t *)output_buffer, (lv_32fc_t *)fc_buffer, (lv_32fc_t *)fc_buffer, dat_size);
 
 			//volk_32fc_x2_multiply_32fc((lv_32fc_t *)output_buffer, (lv_32fc_t *)lpf->output_stream->readBuf, (lv_32fc_t *)lpf->output_stream->readBuf, dat_size);
 
