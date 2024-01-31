@@ -55,8 +55,8 @@ namespace analysis
 
 		if (output_data_type == DATA_FILE)
 		{
-			data_out = std::ofstream(d_output_file_hint + ".wav", std::ios::binary);
-			d_output_files.push_back(d_output_file_hint + ".wav");
+			data_out = std::ofstream(d_output_file_hint + ".f32", std::ios::binary);
+			d_output_files.push_back(d_output_file_hint + ".f32");
 		}
 	
 		//std::ifstream data_in;
@@ -74,7 +74,7 @@ namespace analysis
 		//}
 
 		logger->info("Using input baseband" + d_input_file);
-		logger->info("Saving processed to " + d_output_file_hint + ".wav");
+		logger->info("Saving processed to " + d_output_file_hint + ".f32");
 		logger->info("Buffer size : " + std::to_string(d_buffer_size));
 
 		time_t lastTime = 0;
@@ -89,15 +89,18 @@ namespace analysis
 		//Buffer
 		complex_t *output_buffer = new complex_t[d_buffer_size * 100];
 		//complex_t *input_buffer = new complex_t[d_buffer_size];
-		complex_t *fc_buffer = new complex_t[d_buffer_size * 100];
+		//complex_t *fc_buffer = new complex_t[d_buffer_size * 100];
 
 		//float *real_buffer = new float[d_buffer_size * 100];
 
-		int16_t *output_wav_buffer = new int16_t[d_buffer_size * 100];
+		float *imag = new float[d_buffer_size * 100];
+		float *real = new float[d_buffer_size * 100];
+
+		//int16_t *output_wav_buffer = new int16_t[d_buffer_size * 100];
 		int final_data_size = 0;
-		dsp::WavWriter wave_writer(data_out);
-		if (output_data_type == DATA_FILE)
-			wave_writer.write_header(d_symbolrate, 2);
+	//	dsp::WavWriter wave_writer(data_out);
+	//	if (output_data_type == DATA_FILE)
+	//		wave_writer.write_header(d_symbolrate, 2);
 	
 		int dat_size = 0;
 		while (demod_should_run())
@@ -110,15 +113,17 @@ namespace analysis
 				continue;
 			}
 
-			volk_32f_x2_interleave_32fc((lv_32fc_t *)output_buffer, (float *)lpf->output_stream->readBuf, (float *)lpf->output_stream->readBuf, dat_size);
 
 			//volk_32f_s32f_convert_16i(output_wav_buffer, (float *)lpf->output_stream->readBuf, 65535 * 0.68, dat_size * 2);
 
-			//for (int i = 0; i < dat_size; i++)
-			//{
-
-			//}
+			for (int i = 0; i < dat_size; i++)
+			{
+				imag[i] = lpf->output_stream->readBuf[i].imag;
+				real[i] = lpf->output_stream->readBuf[i].real;
+				//output_stream->writeBuf[i] = complex_t(real, imag);
+			}
 			
+			volk_32f_x2_interleave_32fc((lv_32fc_t *)output_buffer, (float *)real, (float *)imag, dat_size * sizeof(complex_t) * 2);
 
 			
 			//for (int i = 0; i < dat_size; i++)
@@ -136,7 +141,8 @@ namespace analysis
 				data_out.write((char *)output_buffer, dat_size * sizeof(complex_t));
 				//data_out.write((char *)output_wav_buffer, dat_size * sizeof(int16_t) * 2);
 				//logger->trace("%f", lpf->output_stream->readBuf);
-				final_data_size += dat_size * sizeof(int16_t);
+				//final_data_size += dat_size * sizeof(int16_t);
+				final_data_size += dat_size * sizeof(complex_t);
 			}
 			else 
 			{
@@ -168,12 +174,12 @@ namespace analysis
 			}
 		}
 
-		//delete[] output_buffer;
+		delete[] output_buffer;
 
 		// Finish up WAV
-		if (output_data_type == DATA_FILE)
-			wave_writer.finish_header(final_data_size);
-		delete[] output_wav_buffer;
+	//	if (output_data_type == DATA_FILE)
+	//		wave_writer.finish_header(final_data_size);
+	//	delete[] output_wav_buffer;
 
 		if (input_data_type == DATA_FILE)
 			stop();
