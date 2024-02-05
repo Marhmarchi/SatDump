@@ -17,33 +17,50 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Get dependency version
+        id: win-deps-ver
+        shell: bash
+        run: commit=$(git ls-remote https://github.com/Aang23/vcpkg HEAD) && echo deps_version=${commit:0:6} >> $GITHUB_OUTPUT
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        id: win-deps
+        with:
+          path: vcpkg
+          key: win-deps-${{steps.win-deps-ver.outputs.deps_version}}
+
       - name: Clone pre-setup VCPKG
+        if: steps.win-deps.outputs.cache-hit != 'true'
         run: git clone https://github.com/Aang23/vcpkg.git --depth 1
+
+      - name: Download SDRPlay API
+        if: steps.win-deps.outputs.cache-hit != 'true'
+        shell: powershell
+        run: Invoke-WebRequest -Uri "https://www.satdump.org/SDRPlay.zip" -OutFile ${{runner.workspace}}/sdrplay.zip
+
+      - name: Install SDRPlay API
+        if: steps.win-deps.outputs.cache-hit != 'true'
+        shell: powershell
+        run: 7z x ${{runner.workspace}}/sdrplay.zip -O"${{runner.workspace}}"
+
+      - name: Copy SDRPlay API Files
+        if: steps.win-deps.outputs.cache-hit != 'true'
+        shell: powershell
+        run: cp -r "${{runner.workspace}}/SDRPlay/API/inc/*" $Env:GITHUB_WORKSPACE/vcpkg/installed/x64-windows/include/; cp "${{runner.workspace}}/SDRPlay/API/x64/sdrplay_api.dll" $Env:GITHUB_WORKSPACE/vcpkg/installed/x64-windows/bin/sdrplay_api.dll; cp "${{runner.workspace}}/SDRPlay/API/x64/sdrplay_api.lib" $Env:GITHUB_WORKSPACE/vcpkg/installed/x64-windows/lib/sdrplay_api.lib;
+
+      - name: Download Aaronia RTSA API
+        if: steps.win-deps.outputs.cache-hit != 'true'
+        shell: powershell
+        run: Invoke-WebRequest -Uri "https://www.satdump.org/Aaronia_RTSA_Suite_PRO_2.2.0.12821_Setup_64bit.exe" -OutFile $Env:GITHUB_WORKSPACE/vcpkg/rtsa.exe
+
+      - name: Install Aaronia RTSA API
+        shell: cmd
+        run: start /wait vcpkg\rtsa.exe /q2 /install
 
       - name: Create Build Environment
         # Some projects don't allow in-source building, so create a separate build directory
         # We'll use this as our working directory for all subsequent commands
         run: cmake -E make_directory ${{runner.workspace}}/build
-
-      - name: Download SDRPlay API
-        shell: powershell
-        run: Invoke-WebRequest -Uri "https://www.satdump.org/SDRPlay.zip" -OutFile ${{runner.workspace}}/sdrplay.zip
-
-      - name: Install SDRPlay API
-        shell: powershell
-        run: 7z x ${{runner.workspace}}/sdrplay.zip -O"${{runner.workspace}}"
-
-      - name: Copy SDRPlay API Files
-        shell: powershell
-        run: cp -r "${{runner.workspace}}/SDRPlay/API/inc/*" $Env:GITHUB_WORKSPACE/vcpkg/installed/x64-windows/include/; cp "${{runner.workspace}}/SDRPlay/API/x64/sdrplay_api.dll" $Env:GITHUB_WORKSPACE/vcpkg/installed/x64-windows/bin/sdrplay_api.dll; cp "${{runner.workspace}}/SDRPlay/API/x64/sdrplay_api.lib" $Env:GITHUB_WORKSPACE/vcpkg/installed/x64-windows/lib/sdrplay_api.lib;
-
-      - name: Download Aaronia RTSA API
-        shell: powershell
-        run: Invoke-WebRequest -Uri "https://www.satdump.org/Aaronia_RTSA_Suite_PRO_2.2.0.12821_Setup_64bit.exe" -OutFile ${{runner.workspace}}/rtsa.exe
-
-      - name: Install Aaronia RTSA API
-        shell: cmd
-        run: start /wait ${{runner.workspace}}\rtsa.exe /q2 /install
 
       - name: Configure CMake
         working-directory: ${{runner.workspace}}/build
@@ -129,17 +146,21 @@ jobs:
       - name: Install Android NDK
         run: $GITHUB_WORKSPACE/android-sdk-linux/cmdline-tools/bin/sdkmanager --sdk_root=$GITHUB_WORKSPACE/android-sdk-linux --install "ndk;25.2.9519653" --channel=3
 
-      - name: Restore cached dependencies
+      - name: Get dependency version
+        id: android-deps-ver
+        run: commit=$(git -C $GITHUB_WORKSPACE submodule status | grep android) && echo deps_version=${commit:1:6} >> $GITHUB_OUTPUT
+
+      - name: Cache dependencies
         uses: actions/cache@v4
         id: android-deps
         with:
           path: android/deps
-          key: android-deps
+          key: android-deps-${{steps.android-deps-ver.outputs.deps_version}}
 
       - name: Build dependencies
         if: steps.android-deps.outputs.cache-hit != 'true'
         shell: bash
-        run: git submodule update --init && cd $GITHUB_WORKSPACE/android/deps && export ANDROID_HOME=$GITHUB_WORKSPACE/android-sdk-linux && sh build.sh
+        run: git submodule update --init && cd $GITHUB_WORKSPACE/android/deps && export ANDROID_HOME=$GITHUB_WORKSPACE/android-sdk-linux && sh build.sh && rm .git
 
       - name: Build
         shell: bash
@@ -165,7 +186,7 @@ jobs:
         run: sudo apt update
 
       - name: Install dependencies
-        run: sudo apt install -y libglfw3-dev libfftw3-dev libvolk2-dev build-essential cmake pkgconf libjpeg-dev libpng-dev libairspy-dev libairspyhf-dev libhackrf-dev librtlsdr-dev libomp-dev libnng-dev libiio-dev libzstd-dev libad9361-dev libbladerf-dev libuhd-dev liblimesuite-dev ocl-icd-opencl-dev
+        run: sudo apt install -y libglfw3-dev libfftw3-dev libvolk2-dev build-essential cmake pkgconf libjpeg-dev libpng-dev libairspy-dev libairspyhf-dev libhackrf-dev librtlsdr-dev libomp-dev libnng-dev libiio-dev libzstd-dev libad9361-dev libbladerf-dev libuhd-dev liblimesuite-dev ocl-icd-opencl-dev libjemalloc-dev
 
       - name: Create Build Environment
         # Some projects don't allow in-source building, so create a separate build directory
@@ -214,7 +235,7 @@ jobs:
         run: sudo apt update
 
       - name: Install dependencies
-        run: sudo apt install -y libglfw3-dev libfftw3-dev libvolk2-dev build-essential cmake pkgconf libjpeg-dev libpng-dev libairspy-dev libairspyhf-dev libhackrf-dev librtlsdr-dev libomp-dev libnng-dev libiio-dev libzstd-dev libad9361-dev libbladerf-dev libuhd-dev liblimesuite-dev ocl-icd-opencl-dev
+        run: sudo apt install -y libglfw3-dev libfftw3-dev libvolk2-dev build-essential cmake pkgconf libjpeg-dev libpng-dev libairspy-dev libairspyhf-dev libhackrf-dev librtlsdr-dev libomp-dev libnng-dev libiio-dev libzstd-dev libad9361-dev libbladerf-dev libuhd-dev liblimesuite-dev ocl-icd-opencl-dev libjemalloc-dev
 
       - name: Delete build dir
         run: rm -rf ${{runner.workspace}}/build
@@ -259,7 +280,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install dependencies
-        run: brew install cmake volk jpeg libpng glfw airspy rtl-sdr hackrf mbedtls pkg-config libomp dylibbundler portaudio
+        run: brew install cmake volk jpeg libpng glfw airspy rtl-sdr hackrf mbedtls pkg-config libomp dylibbundler portaudio jemalloc
 
       - name: Build airspyhf
         run: git clone https://github.com/airspy/airspyhf.git && cd airspyhf && mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Release .. && make -j8 && sudo make install
