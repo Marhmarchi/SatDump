@@ -49,13 +49,15 @@ namespace analysis
 	{
 		BaseDemodModule::initb();
 
-		// Resampler
-		//res = std::make_shared<dsp::RationalResamplerBlock<complex_t>>(agc->output_stream, d_symbolrate, final_samplerate);
-
 		// Low pass filter
 		lpf = std::make_shared<dsp::FIRBlock<complex_t>>(agc->output_stream, dsp::firdes::low_pass(1.0, d_symbolrate, d_cutoff_freq, d_transition_bw));
+		// Resampler
+		res = std::make_shared<dsp::RationalResamplerBlock<complex_t>>(lpf->output_stream, 2, 1/*d_symbolrate, final_samplerate*/);
 
-		fft_splitter = std::make_shared<dsp::SplitterBlock>(lpf->output_stream);
+
+		//std::shared_ptr<dsp::stream<complex_t>> input_data_final = (d_frequency_shift != 0 ? freq_shift->output_stream : input_stream);
+
+		fft_splitter = std::make_shared<dsp::SplitterBlock>(res->output_stream);
 		fft_splitter->add_output("lowPassFilter");
 		fft_splitter->set_enabled("lowPassFilter", true);
 
@@ -91,7 +93,7 @@ namespace analysis
 
 		// Start
 		BaseDemodModule::start();
-		//res->start();
+		res->start();
 		lpf->start();
 		fft_splitter->start();
 		fft_proc->start();
@@ -129,31 +131,31 @@ namespace analysis
 		int dat_size = 0;
 		while (demod_should_run())
 		{
-			dat_size = lpf->output_stream->read();
+			dat_size = res->output_stream->read();
 
 			if (dat_size <= 0)
 			{
-				lpf->output_stream->flush();
+				res->output_stream->flush();
 				continue;
 			}
 
 
 			//volk_32f_s32f_convert_16i(output_wav_buffer, (float *)lpf->output_stream->readBuf, 65535 * 0.68, dat_size * 2);
 
-			for (int i = 0; i < dat_size; i++)
-			{
-				imag[i] = lpf->output_stream->readBuf[i].imag;
-				real[i] = lpf->output_stream->readBuf[i].real;
-			}
-			
-			// F32 to CF32
-			volk_32f_x2_interleave_32fc((lv_32fc_t *)fc_buffer, (float *)real, (float *)imag, dat_size/* * sizeof(complex_t)*/);
+			//for (int i = 0; i < dat_size; i++)
+			//{
+			//	imag[i] = lpf->output_stream->readBuf[i].imag;
+			//	real[i] = lpf->output_stream->readBuf[i].real;
+			//}
+			//
+			//// F32 to CF32
+			//volk_32f_x2_interleave_32fc((lv_32fc_t *)fc_buffer, (float *)real, (float *)imag, dat_size/* * sizeof(complex_t)*/);
 
 			// Exponentiate
-			volk_32fc_x2_multiply_32fc((lv_32fc_t *)expTwo_output, (lv_32fc_t *)fc_buffer, (lv_32fc_t *)fc_buffer, dat_size);
-			for (int i = 2; i < exponent; i++) {
-				volk_32fc_x2_multiply_32fc((lv_32fc_t *)expTwo_output, (lv_32fc_t *)fc_buffer, (lv_32fc_t *)fc_buffer, dat_size);
-			}
+			//volk_32fc_x2_multiply_32fc((lv_32fc_t *)expTwo_output, (lv_32fc_t *)fc_buffer, (lv_32fc_t *)fc_buffer, dat_size);
+			//for (int i = 2; i < exponent; i++) {
+			//	volk_32fc_x2_multiply_32fc((lv_32fc_t *)expTwo_output, (lv_32fc_t *)fc_buffer, (lv_32fc_t *)fc_buffer, dat_size);
+			//}
 
 
 			// Delay 1 sample
@@ -175,23 +177,23 @@ namespace analysis
 			if (output_data_type == DATA_FILE)
 			{
 				//data_out.write((char *)output_buffer, dat_size * sizeof(complex_t));
-				data_out.write((char *)expTwo_output, dat_size * sizeof(complex_t));
+				//////data_out.write((char *)expTwo_output, dat_size * sizeof(complex_t));
 				//data_out.write((char *)multConj_output, dat_size * sizeof(complex_t));
 				//data_out.write((char *)output_wav_buffer, dat_size * sizeof(int16_t) * 2);
-				logger->trace("%f", lpf->output_stream->readBuf);
+				logger->trace("%f", res->output_stream->readBuf);
 				//final_data_size += dat_size * sizeof(int16_t);
 				final_data_size += dat_size * sizeof(complex_t);
 			}
 			else 
 			{
 				//output_fifo->write((uint8_t *)output_buffer, dat_size * sizeof(complex_t));
-				output_fifo->write((uint8_t *)expTwo_output, dat_size * sizeof(complex_t));
+				//////output_fifo->write((uint8_t *)expTwo_output, dat_size * sizeof(complex_t));
 				//output_fifo->write((uint8_t *)multConj_output, dat_size * sizeof(complex_t));
 				//output_fifo->write((uint8_t *)output_wav_buffer, dat_size * sizeof(int16_t) * 2);
-				logger->trace("%f", lpf->output_stream->readBuf);
+				logger->trace("%f", res->output_stream->readBuf);
 			}
 
-			lpf->output_stream->flush();
+			res->output_stream->flush();
 
 			if (input_data_type == DATA_FILE)
 				progress = file_source->getPosition();
@@ -217,7 +219,7 @@ namespace analysis
 	void AnalysisPsk::stop()
 	{
 		BaseDemodModule::stop();
-		//res->stop();
+		res->stop();
 		lpf->stop();
 		lpf->output_stream->stopReader();
 		fft_splitter->stop();
@@ -280,7 +282,7 @@ namespace analysis
 
                 // Find "actual" left edge of FFT, before frequency shift.
                 // Inset by 10% (819), then account for > 100% freq shifts via modulo
-                int pos = (abs((float)d_frequency_shift / (float)d_samplerate) * (float)8192) + 819;
+                int pos = (abs((float)d_frequency_shift / (float)final_samplerate/*d_samplerate*/) * (float)8192) + 819;
                 pos %= 8192;
 
                 // Compute min and max of the middle 80% of original baseband
