@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <fstream>
 #include <memory>
+#include <sstream>
 #include <stdexcept>
 #include <volk/volk.h>
 #include <volk/volk_complex.h>
@@ -91,7 +92,7 @@ namespace analysis
 		logger->info("Saving processed to " + d_output_file_hint + ".f32");
 		logger->info("Buffer size : " + std::to_string(d_buffer_size));
 
-		//time_t lastTime = 0;
+		time_t lastTime = 0;
 
 		// Start
 		BaseDemodModule::start();
@@ -154,10 +155,10 @@ namespace analysis
 			//volk_32f_x2_interleave_32fc((lv_32fc_t *)fc_buffer, (float *)real, (float *)imag, dat_size/* * sizeof(complex_t)*/);
 
 			// Exponentiate
-			//volk_32fc_x2_multiply_32fc((lv_32fc_t *)expTwo_output, (lv_32fc_t *)fc_buffer, (lv_32fc_t *)fc_buffer, dat_size);
-			//for (int i = 2; i < exponent; i++) {
-			//	volk_32fc_x2_multiply_32fc((lv_32fc_t *)expTwo_output, (lv_32fc_t *)fc_buffer, (lv_32fc_t *)fc_buffer, dat_size);
-			//}
+			volk_32fc_x2_multiply_32fc((lv_32fc_t *)expTwo_output, (lv_32fc_t *)fc_buffer, (lv_32fc_t *)fc_buffer, dat_size);
+			for (int i = 2; i < exponent; i++) {
+				volk_32fc_x2_multiply_32fc((lv_32fc_t *)expTwo_output, (lv_32fc_t *)fc_buffer, (lv_32fc_t *)fc_buffer, dat_size);
+			}
 
 
 			// Delay 1 sample
@@ -200,11 +201,11 @@ namespace analysis
 			if (input_data_type == DATA_FILE)
 				progress = file_source->getPosition();
 
-		//	if (time(NULL) % 10 == 0 && lastTime != time(NULL))
-		//	{
-		//		lastTime = time(NULL);
-		//		logger->info("Progress " + std::to_string(round(((double)progress / (double)filesize) * 1000.0) / 10.0) + "%%");
-		//	}
+			if (time(NULL) % 10 == 0 && lastTime != time(NULL))
+			{
+				lastTime = time(NULL);
+				logger->info("Progress " + std::to_string(round(((double)progress / (double)filesize) * 1000.0) / 10.0) + "%%");
+			}
 		}
 
 		delete[] output_buffer;
@@ -241,15 +242,7 @@ namespace analysis
 			if (ImGui::BeginTabItem("Symbol Rate"))
 			{
 
-				//float curpos = ImGui::GetCursorPosY();
-				//ImGui::SetCursorPosX(ImGui::GetWindowWidth() / 2 - 220 * ui_scale);
-				//ImGui::SetNextItemWidth(200 * ui_scale);
-				//ImGui::SetCursorPosX(ImGui::GetWindowWidth() / 2 - 220 * ui_scale);
-				//ImGui::BeginChild("##cyclo", ImVec2(0, 0), false, ImGuiWindowFlags_None);
 				ImGui::BeginGroup();
-				//ImGui::SetNextItemWidth(200 * ui_scale);
-            			//if (ImGui::Begin("Baseband FFT", NULL, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoResize))
-
 
 				ImGui::Button("Multiply Conjugate", {ImGui::GetWindowWidth() / 2 * ui_scale, 20 * ui_scale});
 				ImGui::SameLine();
@@ -280,8 +273,6 @@ namespace analysis
 				    ImGui::EndChild();
             			}
 				ImGui::SameLine();
-				//if (ImGui::BeginChild("##exp1", ImVec2(200, 200), false, ImGuiWindowFlags_None))
-				//if (ImGui::BeginChild("##exp2", ImVec2(ImGui::GetWindowSize().x / 2, ImGui::GetWindowSize().y / 4), false, ImGuiWindowFlags_None))
 
 
 				if (ImGui::BeginChild("##MulConjOffset", ImVec2(ImGui::GetWindowWidth() / 2 * ui_scale, 400), false, ImGuiWindowFlags_None))
@@ -308,61 +299,7 @@ namespace analysis
             			    }
 				    ImGui::EndChild();
             			}
-        			//ImGui::SetCursorPosY(curpos);
-        			//ImGui::SetCursorPosX(ImGui::GetWindowWidth() / 2 + 20 * ui_scale);
-        			//ImGui::SetNextItemWidth(200 * ui_scale);
-        			//ImGui::SetCursorPosX(ImGui::GetWindowWidth() / 2 + 20 * ui_scale);
-        			//ImGui::SetNextItemWidth(200 * ui_scale);
-            			//if (ImGui::Begin("Baseband FFT", NULL, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoResize))
 
-				//ImGui::Button("Exponentiate ^4", ImVec2(ImGui::GetWindowSize().x / 2, ImGui::GetWindowSize().y / 4));
-				//if (ImGui::BeginChild("##exp4", ImVec2(ImGui::GetWindowSize().x / 2, ImGui::GetWindowSize().y / 4/*ImGui::GetContentRegionAvail().x * 0.5f, ImGui::GetContentRegionAvail().y * 0.5f*/), false, ImGuiWindowFlags_None))
-							//if (ImGui::BeginChild("##exp8", ImVec2(ImGui::GetWindowSize().x / 2, ImGui::GetWindowSize().y / 4), false, ImGuiWindowFlags_None))
-							//ImGui::BeginChild("##cyclo", ImVec2(0, 0), false, ImGuiWindowFlags_None);
-
-				//ImGuiStyle& style = ImGui::GetStyle();
-				//ImGui::BeginGroup();
-				//float child_w = (ImGui::GetContentRegionAvail().x - 4 * style.ItemSpacing.x) /5;
-				//if (child_w < 1.0f)
-				//	child_w = 1.0f;
-                                //
-				//float child_h = (ImGui::GetContentRegionAvail().y - 4 * style.ItemSpacing.y) /5;
-				//if (child_w < 1.0f)
-				//	child_w = 1.0f;
-                                //
-
-
-				//ImGui::BeginChild("Exp2", ImVec2(child_w, child_h), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-
-
-				//ImGui::PushID("##cyclo");
-				//for (int i = 0; i < 4; i++)
-				//{
-				//	if (i > 0) ImGui::SameLine();
-				//	ImGui::BeginGroup();
-				//	const char* names[] = { "Exp 2", "Exp 4", "Exp 8", "Exp 16" };
-				//	ImGui::TextUnformatted(names[i]);
-                                //
-				//	const ImGuiWindowFlags child_flags = 0;
-				//	const ImGuiID child_id = ImGui::GetID((void*)(intptr_t)i);
-				//	const bool child_is_visible = ImGui::BeginChild(child_id, ImVec2(child_w, 100.0f), false, 0);
-                                //
-				//	if (child_is_visible)
-				//	{
-				//		ImGui::Text("HELO");
-				//	}
-				//	ImGui::EndChild();
-				//	ImGui::EndGroup();
-                                //
-                                //
-                                //
-				//}
-				//ImGui::EndGroup();
-				
-
-				
-
-				//ImGui::EndChild();
 				ImGui::EndGroup();
 				ImGui::EndTabItem();
 			}
@@ -405,6 +342,17 @@ namespace analysis
 				const char* expon_numbers[expo_COUNT] = { "2", "4", "8", "16", "32", "64" };
 				const char* expo_number = (expo >= 0 && expo < expo_COUNT) ? expon_numbers[expo] : "Unkown Exponent";
 				ImGui::SliderInt("Exponent number", &expo, 0, expo_COUNT - 1, expo_number);
+
+				//val = std::make_shared<int>(atoi(expo_number));
+
+				int val = atoi(expo_number);
+
+				//std::stringstream expo_string;
+				//expo_string << expo_number;
+
+				//int expo_value;
+				//expo_string >> expo_value;
+
 
 				ImGui::EndGroup();
 				ImGui::EndTabItem();

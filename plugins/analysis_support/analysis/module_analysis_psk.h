@@ -50,6 +50,8 @@ namespace analysis
 			complex_t *input_buffer;
 			complex_t *output_buffer;
 
+			int val;
+
 		public:
 			AnalysisPsk(std::string input_file, std::string output_file_hint, nlohmann::json parameters);
 			~AnalysisPsk();
