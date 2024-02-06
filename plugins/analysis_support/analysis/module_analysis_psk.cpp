@@ -5,6 +5,7 @@
 #include "common/utils.h"
 #include "common/widgets/fft_plot.h"
 #include "core/module.h"
+#include "imgui/imgui_markdown.h"
 #include "logger.h"
 #include "imgui/imgui.h"
 
@@ -89,7 +90,7 @@ namespace analysis
 		logger->info("Saving processed to " + d_output_file_hint + ".f32");
 		logger->info("Buffer size : " + std::to_string(d_buffer_size));
 
-		time_t lastTime = 0;
+		//time_t lastTime = 0;
 
 		// Start
 		BaseDemodModule::start();
@@ -198,11 +199,11 @@ namespace analysis
 			if (input_data_type == DATA_FILE)
 				progress = file_source->getPosition();
 
-			if (time(NULL) % 10 == 0 && lastTime != time(NULL))
-			{
-				lastTime = time(NULL);
-				logger->info("Progress " + std::to_string(round(((double)progress / (double)filesize) * 1000.0) / 10.0) + "%%");
-			}
+		//	if (time(NULL) % 10 == 0 && lastTime != time(NULL))
+		//	{
+		//		lastTime = time(NULL);
+		//		logger->info("Progress " + std::to_string(round(((double)progress / (double)filesize) * 1000.0) / 10.0) + "%%");
+		//	}
 		}
 
 		delete[] output_buffer;
@@ -231,7 +232,194 @@ namespace analysis
 	
 	void AnalysisPsk::drawUI(bool /*window*/)
 	{
-		ImGui::Begin("Analysis", NULL, ImGuiWindowFlags_NoScrollbar);
+		ImGui::Begin("Analysis Module", NULL, ImGuiWindowFlags_NoScrollbar);
+		ImGui::SetWindowSize(ImVec2(800,600), ImGuiCond_FirstUseEver);
+		
+		ImGui::BeginTabBar("##analysistabbar");
+		{
+			if (ImGui::BeginTabItem("Symbol Rate"))
+			{
+
+				//float curpos = ImGui::GetCursorPosY();
+				//ImGui::SetCursorPosX(ImGui::GetWindowWidth() / 2 - 220 * ui_scale);
+				//ImGui::SetNextItemWidth(200 * ui_scale);
+				//ImGui::SetCursorPosX(ImGui::GetWindowWidth() / 2 - 220 * ui_scale);
+				//ImGui::BeginChild("##cyclo", ImVec2(0, 0), false, ImGuiWindowFlags_None);
+				ImGui::BeginGroup();
+				//ImGui::SetNextItemWidth(200 * ui_scale);
+            			//if (ImGui::Begin("Baseband FFT", NULL, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoResize))
+				
+
+				//if (ImGui::BeginChild("##exp1", ImVec2(200, 200), false, ImGuiWindowFlags_None))
+				//ImGui::Button("Exponentiate ^2", ImVec2(ImGui::GetWindowSize().x / 2, ImGui::GetWindowSize().y / 2));
+				if (ImGui::BeginChild("##exp2", ImVec2(ImGui::GetWindowSize().x / 2, ImGui::GetWindowSize().y / 4), false, ImGuiWindowFlags_None))
+            			{
+            			    fft_plot->draw({float(ImGui::GetWindowSize().x - 0), float(ImGui::GetWindowSize().y - 40 * ui_scale) * float(1.0)});
+            			
+            			    // Find "actual" left edge of FFT, before frequency shift.
+            			    // Inset by 10% (819), then account for > 100% freq shifts via modulo
+            			    int pos = (abs((float)d_frequency_shift / (float)final_samplerate/*d_samplerate*/) * (float)8192) + 819;
+            			    pos %= 8192;
+            			
+            			    // Compute min and max of the middle 80% of original baseband
+            			    float min = 1000;
+            			    float max = -1000;
+            			    for (int i = 0; i < 6554; i++) // 8192 * 80% = 6554
+            			    {
+            			        if (fft_proc->output_stream->writeBuf[pos] < min)
+            			            min = fft_proc->output_stream->writeBuf[pos];
+            			        if (fft_proc->output_stream->writeBuf[pos] > max)
+            			            max = fft_proc->output_stream->writeBuf[pos];
+            			        pos++;
+            			        if (pos >= 8192)
+            			            pos = 0;
+            			    }
+				    ImGui::EndChild();
+            			}
+				ImGui::SameLine();
+        			//ImGui::SetCursorPosY(curpos);
+        			//ImGui::SetCursorPosX(ImGui::GetWindowWidth() / 2 + 20 * ui_scale);
+        			//ImGui::SetNextItemWidth(200 * ui_scale);
+        			//ImGui::SetCursorPosX(ImGui::GetWindowWidth() / 2 + 20 * ui_scale);
+        			//ImGui::SetNextItemWidth(200 * ui_scale);
+            			//if (ImGui::Begin("Baseband FFT", NULL, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoResize))
+
+				//ImGui::Button("Exponentiate ^4", ImVec2(ImGui::GetWindowSize().x / 2, ImGui::GetWindowSize().y / 4));
+				if (ImGui::BeginChild("##exp4", ImVec2(ImGui::GetWindowSize().x / 2, ImGui::GetWindowSize().y / 4/*ImGui::GetContentRegionAvail().x * 0.5f, ImGui::GetContentRegionAvail().y * 0.5f*/), false, ImGuiWindowFlags_None))
+            			{
+            			    fft_plot->draw({float(ImGui::GetWindowSize().x - 0), float(ImGui::GetWindowSize().y - 40 * ui_scale) * float(1.0)});
+            			
+            			    // Find "actual" left edge of FFT, before frequency shift.
+            			    // Inset by 10% (819), then account for > 100% freq shifts via modulo
+            			    int pos = (abs((float)d_frequency_shift / (float)final_samplerate/*d_samplerate*/) * (float)8192) + 819;
+            			    pos %= 8192;
+            			
+            			    // Compute min and max of the middle 80% of original baseband
+            			    float min = 1000;
+            			    float max = -1000;
+            			    for (int i = 0; i < 6554; i++) // 8192 * 80% = 6554
+            			    {
+            			        if (fft_proc->output_stream->writeBuf[pos] < min)
+            			            min = fft_proc->output_stream->writeBuf[pos];
+            			        if (fft_proc->output_stream->writeBuf[pos] > max)
+            			            max = fft_proc->output_stream->writeBuf[pos];
+            			        pos++;
+            			        if (pos >= 8192)
+            			            pos = 0;
+            			    }
+				    ImGui::EndChild();
+            			}
+
+				if (ImGui::BeginChild("##exp8", ImVec2(ImGui::GetWindowSize().x / 2, ImGui::GetWindowSize().y / 4), false, ImGuiWindowFlags_None))
+            			{
+            			    fft_plot->draw({float(ImGui::GetWindowSize().x - 0), float(ImGui::GetWindowSize().y - 40 * ui_scale) * float(1.0)});
+            			
+            			    // Find "actual" left edge of FFT, before frequency shift.
+            			    // Inset by 10% (819), then account for > 100% freq shifts via modulo
+            			    int pos = (abs((float)d_frequency_shift / (float)final_samplerate/*d_samplerate*/) * (float)8192) + 819;
+            			    pos %= 8192;
+            			
+            			    // Compute min and max of the middle 80% of original baseband
+            			    float min = 1000;
+            			    float max = -1000;
+            			    for (int i = 0; i < 6554; i++) // 8192 * 80% = 6554
+            			    {
+            			        if (fft_proc->output_stream->writeBuf[pos] < min)
+            			            min = fft_proc->output_stream->writeBuf[pos];
+            			        if (fft_proc->output_stream->writeBuf[pos] > max)
+            			            max = fft_proc->output_stream->writeBuf[pos];
+            			        pos++;
+            			        if (pos >= 8192)
+            			            pos = 0;
+            			    }
+				    ImGui::EndChild();
+            			}
+
+				ImGui::SameLine();
+
+				if (ImGui::BeginChild("##exp16", ImVec2(ImGui::GetWindowSize().x / 2, ImGui::GetWindowSize().y / 4), false, ImGuiWindowFlags_None))
+            			{
+            			    fft_plot->draw({float(ImGui::GetWindowSize().x - 0), float(ImGui::GetWindowSize().y - 40 * ui_scale) * float(1.0)});
+            			
+            			    // Find "actual" left edge of FFT, before frequency shift.
+            			    // Inset by 10% (819), then account for > 100% freq shifts via modulo
+            			    int pos = (abs((float)d_frequency_shift / (float)final_samplerate/*d_samplerate*/) * (float)8192) + 819;
+            			    pos %= 8192;
+            			
+            			    // Compute min and max of the middle 80% of original baseband
+            			    float min = 1000;
+            			    float max = -1000;
+            			    for (int i = 0; i < 6554; i++) // 8192 * 80% = 6554
+            			    {
+            			        if (fft_proc->output_stream->writeBuf[pos] < min)
+            			            min = fft_proc->output_stream->writeBuf[pos];
+            			        if (fft_proc->output_stream->writeBuf[pos] > max)
+            			            max = fft_proc->output_stream->writeBuf[pos];
+            			        pos++;
+            			        if (pos >= 8192)
+            			            pos = 0;
+            			    }
+				    ImGui::EndChild();
+            			}
+
+				//ImGui::BeginChild("##cyclo", ImVec2(0, 0), false, ImGuiWindowFlags_None);
+
+				//ImGuiStyle& style = ImGui::GetStyle();
+				//ImGui::BeginGroup();
+				//float child_w = (ImGui::GetContentRegionAvail().x - 4 * style.ItemSpacing.x) /5;
+				//if (child_w < 1.0f)
+				//	child_w = 1.0f;
+                                //
+				//float child_h = (ImGui::GetContentRegionAvail().y - 4 * style.ItemSpacing.y) /5;
+				//if (child_w < 1.0f)
+				//	child_w = 1.0f;
+                                //
+
+
+				//ImGui::BeginChild("Exp2", ImVec2(child_w, child_h), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+
+
+				//ImGui::PushID("##cyclo");
+				//for (int i = 0; i < 4; i++)
+				//{
+				//	if (i > 0) ImGui::SameLine();
+				//	ImGui::BeginGroup();
+				//	const char* names[] = { "Exp 2", "Exp 4", "Exp 8", "Exp 16" };
+				//	ImGui::TextUnformatted(names[i]);
+                                //
+				//	const ImGuiWindowFlags child_flags = 0;
+				//	const ImGuiID child_id = ImGui::GetID((void*)(intptr_t)i);
+				//	const bool child_is_visible = ImGui::BeginChild(child_id, ImVec2(child_w, 100.0f), false, 0);
+                                //
+				//	if (child_is_visible)
+				//	{
+				//		ImGui::Text("HELO");
+				//	}
+				//	ImGui::EndChild();
+				//	ImGui::EndGroup();
+                                //
+                                //
+                                //
+				//}
+				//ImGui::EndGroup();
+				
+
+				
+
+				//ImGui::EndChild();
+				ImGui::EndGroup();
+				ImGui::EndTabItem();
+			}
+
+			if (ImGui::BeginTabItem("Modulation"))
+			{
+				ImGui::BeginChild("##order", ImVec2(0, 0), false, ImGuiWindowFlags_None);
+				
+
+				ImGui::EndChild();
+				ImGui::EndTabItem();
+			}
+		}
 
 		ImGui::BeginGroup();
 		{
@@ -249,19 +437,6 @@ namespace analysis
 			ImGui::ProgressBar((double)progress / (double)filesize, ImVec2(ImGui::GetWindowWidth() - 10, 20 * ui_scale));
 
 
-		ImGui::BeginTabBar("##analysistabbar");
-		{
-			if (ImGui::BeginTabItem("Symbol Rate"))
-			{
-				drawAnaFFT();
-				ImGui::EndTabItem();
-			}
-
-			if (ImGui::BeginTabItem("Order"))
-			{
-				ImGui::EndTabItem();
-			}
-		}
 		ImGui::EndTabBar();
 
 		drawStopButton();
@@ -273,36 +448,36 @@ namespace analysis
 	}
 
 	
-    void AnalysisPsk::drawAnaFFT()
-        {
-            ImGui::SetNextWindowSize({400 * (float)ui_scale, (float)(400) * (float)ui_scale});
-            if (ImGui::Begin("Baseband FFT", NULL, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoResize))
-            {
-                fft_plot->draw({float(ImGui::GetWindowSize().x - 0), float(ImGui::GetWindowSize().y - 40 * ui_scale) * float(1.0)});
+   // void AnalysisPsk::drawAnaFFT()
+   //     {
+   //         ImGui::SetNextWindowSize({400 * (float)ui_scale, (float)(400) * (float)ui_scale});
+   //         if (ImGui::Begin("Baseband FFT", NULL, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoResize))
+   //         {
+   //             fft_plot->draw({float(ImGui::GetWindowSize().x - 0), float(ImGui::GetWindowSize().y - 40 * ui_scale) * float(1.0)});
 
-                // Find "actual" left edge of FFT, before frequency shift.
-                // Inset by 10% (819), then account for > 100% freq shifts via modulo
-                int pos = (abs((float)d_frequency_shift / (float)final_samplerate/*d_samplerate*/) * (float)8192) + 819;
-                pos %= 8192;
+   //             // Find "actual" left edge of FFT, before frequency shift.
+   //             // Inset by 10% (819), then account for > 100% freq shifts via modulo
+   //             int pos = (abs((float)d_frequency_shift / (float)final_samplerate/*d_samplerate*/) * (float)8192) + 819;
+   //             pos %= 8192;
 
-                // Compute min and max of the middle 80% of original baseband
-                float min = 1000;
-                float max = -1000;
-                for (int i = 0; i < 6554; i++) // 8192 * 80% = 6554
-                {
-                    if (fft_proc->output_stream->writeBuf[pos] < min)
-                        min = fft_proc->output_stream->writeBuf[pos];
-                    if (fft_proc->output_stream->writeBuf[pos] > max)
-                        max = fft_proc->output_stream->writeBuf[pos];
-                    pos++;
-                    if (pos >= 8192)
-                        pos = 0;
-                }
+   //             // Compute min and max of the middle 80% of original baseband
+   //             float min = 1000;
+   //             float max = -1000;
+   //             for (int i = 0; i < 6554; i++) // 8192 * 80% = 6554
+   //             {
+   //                 if (fft_proc->output_stream->writeBuf[pos] < min)
+   //                     min = fft_proc->output_stream->writeBuf[pos];
+   //                 if (fft_proc->output_stream->writeBuf[pos] > max)
+   //                     max = fft_proc->output_stream->writeBuf[pos];
+   //                 pos++;
+   //                 if (pos >= 8192)
+   //                     pos = 0;
+   //             }
 
-            }
+   //         }
 
-            ImGui::End();
-        }
+   //         ImGui::End();
+   //     }
 
 
 
