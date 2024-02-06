@@ -38,7 +38,7 @@ namespace analysis
 			std::shared_ptr<dsp::FFTPanBlock> fft_proc;
 			std::shared_ptr<widgets::FFTPlot> fft_plot;
 
-			std::shared_ptr<dsp::FileSinkBlock> meep_fft;
+			//std::shared_ptr<dsp::FileSinkBlock> meep_fft;
 
 			//std::shared_ptr<dsp::SplitterBlock> fft_splitter;
 			//std::shared_ptr<dsp::FFTPanBlock> fft_proc;
@@ -56,6 +56,8 @@ namespace analysis
 			void init();
 			void stop();
 			void process();
+
+			bool enable_freq_scale = true;
 			
 			void drawUI(bool window);
 			//std::vector<ModuleDataType> getInputTypes();
