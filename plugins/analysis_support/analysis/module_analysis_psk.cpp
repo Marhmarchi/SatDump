@@ -2,6 +2,7 @@
 #include "common/dsp/fft/fft_pan.h"
 #include "common/dsp/io/wav_writer.h"
 #include "common/dsp/path/splitter.h"
+#include "common/dsp/utils/real_to_complex.h"
 #include "common/utils.h"
 #include "common/widgets/fft_plot.h"
 #include "core/module.h"
@@ -18,10 +19,11 @@
 #include <memory>
 #include <sstream>
 #include <stdexcept>
+#include <string>
 #include <volk/volk.h>
 #include <volk/volk_complex.h>
 
-#define BUFFER_SIZE 8192
+//#define BUFFER_SIZE 8192
 
 namespace analysis
 {
@@ -55,10 +57,29 @@ namespace analysis
 	{
 		BaseDemodModule::initb();
 
-		// Low pass filter
-		lpf = std::make_shared<dsp::FIRBlock<complex_t>>(agc->output_stream, dsp::firdes::low_pass(1.0, d_symbolrate, d_cutoff_freq, d_transition_bw));
+		int interpol = 2;
+
+		logger->critical("Final samplerate BEFORE everything: " + std::to_string(final_samplerate));
+		logger->critical("Normal samplerate BEFORE everything: " + std::to_string(d_samplerate));
+
+
 		// Resampler
-		//res = std::make_shared<dsp::RationalResamplerBlock<complex_t>>(lpf->output_stream, 2, 1/*d_symbolrate, final_samplerate*/);
+		res = std::make_shared<dsp::RationalResamplerBlock<complex_t>>(agc->output_stream, interpol, 1/*d_symbolrate, final_samplerate*/);
+
+		//final_samplerate = d_samplerate * interpol;
+		logger->critical("Final samplerate after res: " + std::to_string(final_samplerate));
+		logger->critical("Normal input samplerate after res : " + std::to_string(d_samplerate));
+
+
+		// Low pass filter
+		lpf = std::make_shared<dsp::FIRBlock<complex_t>>(res->output_stream, dsp::firdes::low_pass(1.0, final_samplerate * 2, d_cutoff_freq, d_transition_bw));
+
+		logger->critical("Final samplerate after lpf: " + std::to_string(final_samplerate));
+		logger->critical("Normal input samplerate after lpf : " + std::to_string(d_samplerate));
+
+
+		// Real To Complex
+		//rtc = std::make_shared<dsp::RealToComplexBlock>(res->output_stream);
 
 
 		//std::shared_ptr<dsp::stream<complex_t>> input_data_final = (d_frequency_shift != 0 ? freq_shift->output_stream : input_stream);
@@ -68,10 +89,11 @@ namespace analysis
 		fft_splitter->set_enabled("lowPassFilter", true);
 
 		fft_proc = std::make_shared<dsp::FFTPanBlock>(fft_splitter->get_output("lowPassFilter"));
-		fft_proc->set_fft_settings(8192, final_samplerate, 120);
-		fft_proc->avg_num = 10;
+		fft_proc->set_fft_settings(32768, final_samplerate, 120);
+		//fft_proc->avg_num = 10;
 		//fft_plot->enable_freq_scale;
-		fft_plot = std::make_shared<widgets::FFTPlot>(fft_proc->output_stream->writeBuf, 8192, -10, 10, 10);
+		//fft_plot->bandwidth = final_samplerate;
+		fft_plot = std::make_shared<widgets::FFTPlot>(fft_proc->output_stream->writeBuf, 32768, -20, 10, 10);
 
 	}
 
@@ -100,7 +122,7 @@ namespace analysis
 
 		// Start
 		BaseDemodModule::start();
-		//res->start();
+		res->start();
 		lpf->start();
 		fft_splitter->start();
 		fft_proc->start();
@@ -121,9 +143,24 @@ namespace analysis
 		complex_t last_samp = 0;
 
 		//float *real_buffer = new float[d_buffer_size * 100];
+		
+		// Make it standard/easier while deving
+		complex_t *fc32 = new complex_t[d_buffer_size * 200];
+		float *f32_real = new float[d_buffer_size * 100];
+		float *f32_imag = new float[d_buffer_size * 100];
 
-		float *imag = new float[d_buffer_size * 100];
-		float *real = new float[d_buffer_size * 100];
+		float *f32_delayed = new float[d_buffer_size * 100];
+		float *f32_not_delayed = new float[d_buffer_size * 100];
+		float f32_last_samp = 0;
+
+		complex_t *fc32_delayed = new complex_t[d_buffer_size * 200];
+		complex_t *fc32_not_delayed = new complex_t[d_buffer_size * 200];
+
+		complex_t *fc32_mul_n_conj = new complex_t[d_buffer_size * 200];
+		float *f32_mag = new float[d_buffer_size * 100];
+		complex_t *fc32_mul_n_conj_offset = new complex_t[d_buffer_size * 200];
+
+
 
 		//int exponent = 2;
 
@@ -147,18 +184,25 @@ namespace analysis
 
 			//volk_32f_s32f_convert_16i(output_wav_buffer, (float *)lpf->output_stream->readBuf, 65535 * 0.68, dat_size * 2);
 
+			// Complex to Float - Real and Imag
 			//for (int i = 0; i < dat_size; i++)
 			//{
-			//	imag[i] = lpf->output_stream->readBuf[i].imag;
 			//	real[i] = lpf->output_stream->readBuf[i].real;
+			//	imag[i] = lpf->output_stream->readBuf[i].imag;
 			//}
 			
-
 			//real = lpf->output_stream->readBuf;
 			//imag = lpf->output_stream->readBuf;
 
-			//// F32 to CF32
+
+			// fc32 to f32 Real & f32 Imag
+			//volk_32fc_deinterleave_32f_x2((float *)f32_real, (float *)f32_imag, (lv_32fc_t *)fc32, dat_size);
+
+
+
+			//// f32 to fc32
 			//volk_32f_x2_interleave_32fc((lv_32fc_t *)fc_buffer, (float *)real, (float *)imag, dat_size/* * sizeof(complex_t)*/);
+
 
 			// Exponentiate
 			//volk_32fc_x2_multiply_32fc((lv_32fc_t *)exp_output, (lv_32fc_t *)fc_buffer, (lv_32fc_t *)fc_buffer, dat_size);
@@ -183,13 +227,62 @@ namespace analysis
 
 
 
+
+
+			// Multiply conjugate - Offset //
+			//
+			// Complex to Float
+			volk_32fc_deinterleave_32f_x2((float *)f32_real, (float *)f32_imag, (lv_32fc_t *)lpf->output_stream->readBuf, dat_size);
+
+
+			// Delay imaginary branch by 1 sample
+			for (int i = 0; i < dat_size; i++)
+			{
+				f32_delayed[i] = i == 0 ? f32_last_samp : f32_imag[i - 1];
+				//f32_non_delayed[i] = f32_imag[i];
+			}
+
+			f32_last_samp = f32_imag[dat_size - 1];
+
+
+			// Convert the delyed imag float and (non delayed) real float to complex 
+			volk_32f_x2_interleave_32fc((lv_32fc_t *)fc32, (float *)f32_real, (float *)f32_delayed, dat_size);
+
+			// Now we perform the normal Multiply Conjugate with the offsetted input fc32
+			//
+			// Duplicate and delay one stream
+			for (int i = 0; i < dat_size; i++)
+			{
+				fc32_delayed[i] = i == 0 ? last_samp : fc32[i - 1];
+				// Get not delayed stream to avoid desync as a sanity measure
+				fc32_not_delayed[i] = fc32[i];
+			}
+
+			last_samp = fc32[dat_size - 1];
+
+			// Multiply conjugate
+			volk_32fc_x2_multiply_conjugate_32fc((lv_32fc_t *)fc32_mul_n_conj, (lv_32fc_t *)fc32_not_delayed, (lv_32fc_t *)fc32_delayed, dat_size);
+
+			// Complex to Mag
+			volk_32fc_magnitude_32f((float *)f32_mag, (lv_32fc_t *)fc32_mul_n_conj, dat_size / 2);
+
+			// Real to Complex
+			volk_32f_x2_interleave_32fc((lv_32fc_t *)fc32_mul_n_conj_offset, (float *)f32_mag, (float *)f32_mag, dat_size);
+		
+
+
+
+
+
+
+
 			if (output_data_type == DATA_FILE)
 			{
-				//data_out.write((char *)output_buffer, dat_size * sizeof(complex_t));
+				data_out.write((char *)fc32_mul_n_conj_offset, dat_size * sizeof(complex_t));
 				//////data_out.write((char *)expTwo_output, dat_size * sizeof(complex_t));
 				//data_out.write((char *)multConj_output, dat_size * sizeof(complex_t));
 				//data_out.write((char *)output_wav_buffer, dat_size * sizeof(int16_t) * 2);
-				logger->trace("%f", lpf->output_stream->readBuf);
+				//logger->trace("%f", lpf->output_stream->readBuf);
 				//final_data_size += dat_size * sizeof(int16_t);
 				final_data_size += dat_size * sizeof(complex_t);
 			}
@@ -199,7 +292,7 @@ namespace analysis
 				//////output_fifo->write((uint8_t *)expTwo_output, dat_size * sizeof(complex_t));
 				//output_fifo->write((uint8_t *)multConj_output, dat_size * sizeof(complex_t));
 				//output_fifo->write((uint8_t *)output_wav_buffer, dat_size * sizeof(int16_t) * 2);
-				logger->trace("%f", lpf->output_stream->readBuf);
+				//logger->trace("%f", lpf->output_stream->readBuf);
 			}
 
 			lpf->output_stream->flush();
@@ -214,7 +307,7 @@ namespace analysis
 			}
 		}
 
-		delete[] output_buffer;
+		//delete[] output_buffer;
 
 		// Finish up WAV
 	//	if (output_data_type == DATA_FILE)
@@ -228,9 +321,9 @@ namespace analysis
 	void AnalysisPsk::stop()
 	{
 		BaseDemodModule::stop();
-		//res->stop();
+		//lpf->output_stream->stopReader();
+		res->stop();
 		lpf->stop();
-		lpf->output_stream->stopReader();
 		fft_splitter->stop();
 		fft_proc->stop();
 
@@ -260,22 +353,22 @@ namespace analysis
             			
             			    // Find "actual" left edge of FFT, before frequency shift.
             			    // Inset by 10% (819), then account for > 100% freq shifts via modulo
-            			    int pos = (abs((float)d_frequency_shift / (float)final_samplerate/*d_samplerate*/) * (float)8192) + 819;
-            			    pos %= 8192;
-            			
-            			    // Compute min and max of the middle 80% of original baseband
-            			    float min = 1000;
-            			    float max = -1000;
-            			    for (int i = 0; i < 6554; i++) // 8192 * 80% = 6554
-            			    {
-            			        if (fft_proc->output_stream->writeBuf[pos] < min)
-            			            min = fft_proc->output_stream->writeBuf[pos];
-            			        if (fft_proc->output_stream->writeBuf[pos] > max)
-            			            max = fft_proc->output_stream->writeBuf[pos];
-            			        pos++;
-            			        if (pos >= 8192)
-            			            pos = 0;
-            			    }
+            			    //int pos = (abs((float)d_frequency_shift / (float)final_samplerate * 2/*d_samplerate*/) * (float)8192) + 819;
+            			    //pos %= 8192;
+            			    //
+            			    //// Compute min and max of the middle 80% of original baseband
+            			    //float min = 1000;
+            			    //float max = -1000;
+            			    //for (int i = 0; i < 6554; i++) // 8192 * 80% = 6554
+            			    //{
+            			    //    if (fft_proc->output_stream->writeBuf[pos] < min)
+            			    //        min = fft_proc->output_stream->writeBuf[pos];
+            			    //    if (fft_proc->output_stream->writeBuf[pos] > max)
+            			    //        max = fft_proc->output_stream->writeBuf[pos];
+            			    //    pos++;
+            			    //    if (pos >= 8192)
+            			    //        pos = 0;
+            			    //}
 				    ImGui::EndChild();
             			}
 				ImGui::SameLine();
@@ -287,22 +380,22 @@ namespace analysis
             			
             			    // Find "actual" left edge of FFT, before frequency shift.
             			    // Inset by 10% (819), then account for > 100% freq shifts via modulo
-            			    int pos = (abs((float)d_frequency_shift / (float)final_samplerate/*d_samplerate*/) * (float)8192) + 819;
-            			    pos %= 8192;
+            			    //int pos = (abs((float)d_frequency_shift / (float)final_samplerate * 2/*d_samplerate*/) * (float)8192) + 819;
+            			    //pos %= 8192;
             			
-            			    // Compute min and max of the middle 80% of original baseband
-            			    float min = 1000;
-            			    float max = -1000;
-            			    for (int i = 0; i < 6554; i++) // 8192 * 80% = 6554
-            			    {
-            			        if (fft_proc->output_stream->writeBuf[pos] < min)
-            			            min = fft_proc->output_stream->writeBuf[pos];
-            			        if (fft_proc->output_stream->writeBuf[pos] > max)
-            			            max = fft_proc->output_stream->writeBuf[pos];
-            			        pos++;
-            			        if (pos >= 8192)
-            			            pos = 0;
-            			    }
+            			    //// Compute min and max of the middle 80% of original baseband
+            			    //float min = 1000;
+            			    //float max = -1000;
+            			    //for (int i = 0; i < 6554; i++) // 8192 * 80% = 6554
+            			    //{
+            			    //    if (fft_proc->output_stream->writeBuf[pos] < min)
+            			    //        min = fft_proc->output_stream->writeBuf[pos];
+            			    //    if (fft_proc->output_stream->writeBuf[pos] > max)
+            			    //        max = fft_proc->output_stream->writeBuf[pos];
+            			    //    pos++;
+            			    //    if (pos >= 8192)
+            			    //        pos = 0;
+            			    //}
 				    ImGui::EndChild();
             			}
 
@@ -323,22 +416,22 @@ namespace analysis
             			
             			    // Find "actual" left edge of FFT, before frequency shift.
             			    // Inset by 10% (819), then account for > 100% freq shifts via modulo
-            			    int pos = (abs((float)d_frequency_shift / (float)final_samplerate/*d_samplerate*/) * (float)8192) + 819;
-            			    pos %= 8192;
+            			    //int pos = (abs((float)d_frequency_shift / (float)final_samplerate * 2/*d_samplerate*/) * (float)8192) + 819;
+            			    //pos %= 8192;
             			
-            			    // Compute min and max of the middle 80% of original baseband
-            			    float min = 1000;
-            			    float max = -1000;
-            			    for (int i = 0; i < 6554; i++) // 8192 * 80% = 6554
-            			    {
-            			        if (fft_proc->output_stream->writeBuf[pos] < min)
-            			            min = fft_proc->output_stream->writeBuf[pos];
-            			        if (fft_proc->output_stream->writeBuf[pos] > max)
-            			            max = fft_proc->output_stream->writeBuf[pos];
-            			        pos++;
-            			        if (pos >= 8192)
-            			            pos = 0;
-            			    }
+            			    //// Compute min and max of the middle 80% of original baseband
+            			    //float min = 1000;
+            			    //float max = -1000;
+            			    //for (int i = 0; i < 6554; i++) // 8192 * 80% = 6554
+            			    //{
+            			    //    if (fft_proc->output_stream->writeBuf[pos] < min)
+            			    //        min = fft_proc->output_stream->writeBuf[pos];
+            			    //    if (fft_proc->output_stream->writeBuf[pos] > max)
+            			    //        max = fft_proc->output_stream->writeBuf[pos];
+            			    //    pos++;
+            			    //    if (pos >= 8192)
+            			    //        pos = 0;
+            			    //}
 				    ImGui::EndChild();
             			}
 

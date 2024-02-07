@@ -13,9 +13,9 @@
 			"baseband": {},
 			"soft": {
 				"analysis_psk": {
-					"symbolrate": 100e3,
-					"cutoff_freq": 20e3,
-					"transition_bw": 500
+					"symbolrate": 8e6,
+					"cutoff_freq": 2e6,
+					"transition_bw": 50e3
 				}
 			}
 		}

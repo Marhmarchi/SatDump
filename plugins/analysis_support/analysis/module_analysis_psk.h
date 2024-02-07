@@ -2,6 +2,7 @@
 
 #include "common/dsp/io/file_sink.h"
 #include "common/dsp/resamp/smart_resampler.h"
+#include "common/dsp/utils/real_to_complex.h"
 #include "modules/demod/module_demod_base.h"
 #include "nlohmann/json.hpp"
 #include "common/dsp/filter/fir.h"
@@ -29,6 +30,7 @@ namespace analysis
 			//std::shared_ptr<dsp::SmartResamplerBlock<complex_t>> smart_res;
 			std::shared_ptr<dsp::RationalResamplerBlock<complex_t>> res;
 			std::shared_ptr<dsp::FIRBlock<complex_t>> lpf;
+			std::shared_ptr<dsp::RealToComplexBlock> rtc;
 			//std::shared_ptr<dsp::AGC2Block<complex_t>> agc2;
 
 			std::ifstream data_in;
