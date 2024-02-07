@@ -8,6 +8,8 @@
 #include "imgui/imgui_markdown.h"
 #include "logger.h"
 #include "imgui/imgui.h"
+#include "core/config.h"
+
 
 #include "common/dsp/filter/firdes.h"
 #include <complex.h>
@@ -39,7 +41,9 @@ namespace analysis
 		else
 			throw std::runtime_error("Transition bandwidth must be present!");
 
+		//exponent = satdump::config::main_cfg["user_interface"]["exponent"]["value"].get<int>();
 
+		//enable_freq_scale;
 		show_freq = true;
 		
 		MIN_SPS = 1;
@@ -54,19 +58,19 @@ namespace analysis
 		// Low pass filter
 		lpf = std::make_shared<dsp::FIRBlock<complex_t>>(agc->output_stream, dsp::firdes::low_pass(1.0, d_symbolrate, d_cutoff_freq, d_transition_bw));
 		// Resampler
-		res = std::make_shared<dsp::RationalResamplerBlock<complex_t>>(lpf->output_stream, 2, 1/*d_symbolrate, final_samplerate*/);
+		//res = std::make_shared<dsp::RationalResamplerBlock<complex_t>>(lpf->output_stream, 2, 1/*d_symbolrate, final_samplerate*/);
 
 
 		//std::shared_ptr<dsp::stream<complex_t>> input_data_final = (d_frequency_shift != 0 ? freq_shift->output_stream : input_stream);
 
-		fft_splitter = std::make_shared<dsp::SplitterBlock>(res->output_stream);
+		fft_splitter = std::make_shared<dsp::SplitterBlock>(lpf->output_stream);
 		fft_splitter->add_output("lowPassFilter");
 		fft_splitter->set_enabled("lowPassFilter", true);
 
 		fft_proc = std::make_shared<dsp::FFTPanBlock>(fft_splitter->get_output("lowPassFilter"));
 		fft_proc->set_fft_settings(8192, final_samplerate, 120);
 		fft_proc->avg_num = 10;
-		fft_plot->enable_freq_scale;
+		//fft_plot->enable_freq_scale;
 		fft_plot = std::make_shared<widgets::FFTPlot>(fft_proc->output_stream->writeBuf, 8192, -10, 10, 10);
 
 	}
@@ -96,7 +100,7 @@ namespace analysis
 
 		// Start
 		BaseDemodModule::start();
-		res->start();
+		//res->start();
 		lpf->start();
 		fft_splitter->start();
 		fft_proc->start();
@@ -106,9 +110,7 @@ namespace analysis
 		//complex_t *input_buffer = new complex_t[d_buffer_size];
 		complex_t *fc_buffer = new complex_t[d_buffer_size * 200];
 
-		complex_t *expTwo_output = new complex_t[d_buffer_size * 200];
-		complex_t *expFour_output = new complex_t[d_buffer_size * 200];
-		complex_t *expEight_output = new complex_t[d_buffer_size * 200];
+		complex_t *exp_output = new complex_t[d_buffer_size * 200];
 
 		complex_t *multConj_output = new complex_t[d_buffer_size * 200];
 		float *compMag_output = new float[d_buffer_size * 100];
@@ -123,7 +125,7 @@ namespace analysis
 		float *imag = new float[d_buffer_size * 100];
 		float *real = new float[d_buffer_size * 100];
 
-		int exponent = 2;
+		//int exponent = 2;
 
 		//int16_t *output_wav_buffer = new int16_t[d_buffer_size * 100];
 		int final_data_size = 0;
@@ -134,11 +136,11 @@ namespace analysis
 		int dat_size = 0;
 		while (demod_should_run())
 		{
-			dat_size = res->output_stream->read();
+			dat_size = lpf->output_stream->read();
 
 			if (dat_size <= 0)
 			{
-				res->output_stream->flush();
+				lpf->output_stream->flush();
 				continue;
 			}
 
@@ -150,15 +152,19 @@ namespace analysis
 			//	imag[i] = lpf->output_stream->readBuf[i].imag;
 			//	real[i] = lpf->output_stream->readBuf[i].real;
 			//}
-			//
+			
+
+			//real = lpf->output_stream->readBuf;
+			//imag = lpf->output_stream->readBuf;
+
 			//// F32 to CF32
 			//volk_32f_x2_interleave_32fc((lv_32fc_t *)fc_buffer, (float *)real, (float *)imag, dat_size/* * sizeof(complex_t)*/);
 
 			// Exponentiate
-			volk_32fc_x2_multiply_32fc((lv_32fc_t *)expTwo_output, (lv_32fc_t *)fc_buffer, (lv_32fc_t *)fc_buffer, dat_size);
-			for (int i = 2; i < exponent; i++) {
-				volk_32fc_x2_multiply_32fc((lv_32fc_t *)expTwo_output, (lv_32fc_t *)fc_buffer, (lv_32fc_t *)fc_buffer, dat_size);
-			}
+			//volk_32fc_x2_multiply_32fc((lv_32fc_t *)exp_output, (lv_32fc_t *)fc_buffer, (lv_32fc_t *)fc_buffer, dat_size);
+			//for (int i = 2; i < exponent; i++) {
+			//	volk_32fc_x2_multiply_32fc((lv_32fc_t *)exp_output, (lv_32fc_t *)exp_output, (lv_32fc_t *)fc_buffer, dat_size);
+			//}
 
 
 			// Delay 1 sample
@@ -183,7 +189,7 @@ namespace analysis
 				//////data_out.write((char *)expTwo_output, dat_size * sizeof(complex_t));
 				//data_out.write((char *)multConj_output, dat_size * sizeof(complex_t));
 				//data_out.write((char *)output_wav_buffer, dat_size * sizeof(int16_t) * 2);
-				logger->trace("%f", res->output_stream->readBuf);
+				logger->trace("%f", lpf->output_stream->readBuf);
 				//final_data_size += dat_size * sizeof(int16_t);
 				final_data_size += dat_size * sizeof(complex_t);
 			}
@@ -193,10 +199,10 @@ namespace analysis
 				//////output_fifo->write((uint8_t *)expTwo_output, dat_size * sizeof(complex_t));
 				//output_fifo->write((uint8_t *)multConj_output, dat_size * sizeof(complex_t));
 				//output_fifo->write((uint8_t *)output_wav_buffer, dat_size * sizeof(int16_t) * 2);
-				logger->trace("%f", res->output_stream->readBuf);
+				logger->trace("%f", lpf->output_stream->readBuf);
 			}
 
-			res->output_stream->flush();
+			lpf->output_stream->flush();
 
 			if (input_data_type == DATA_FILE)
 				progress = file_source->getPosition();
@@ -222,7 +228,7 @@ namespace analysis
 	void AnalysisPsk::stop()
 	{
 		BaseDemodModule::stop();
-		res->stop();
+		//res->stop();
 		lpf->stop();
 		lpf->output_stream->stopReader();
 		fft_splitter->stop();
@@ -345,7 +351,7 @@ namespace analysis
 
 				//val = std::make_shared<int>(atoi(expo_number));
 
-				int val = atoi(expo_number);
+				//int exponent = atoi(expo_number);
 
 				//std::stringstream expo_string;
 				//expo_string << expo_number;

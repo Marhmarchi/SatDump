@@ -38,6 +38,10 @@ namespace analysis
 			std::shared_ptr<dsp::FFTPanBlock> fft_proc;
 			std::shared_ptr<widgets::FFTPlot> fft_plot;
 
+			int exponent = 2;
+
+
+
 			//std::shared_ptr<dsp::FileSinkBlock> meep_fft;
 
 			//std::shared_ptr<dsp::SplitterBlock> fft_splitter;
@@ -49,8 +53,6 @@ namespace analysis
 
 			complex_t *input_buffer;
 			complex_t *output_buffer;
-
-			int val;
 
 		public:
 			AnalysisPsk(std::string input_file, std::string output_file_hint, nlohmann::json parameters);
