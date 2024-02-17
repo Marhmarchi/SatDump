@@ -73,7 +73,7 @@ namespace analysis
 //
 //
 //		// Low pass filter
-		lpf = std::make_shared<dsp::FIRBlock<complex_t>>(nullptr, dsp::firdes::low_pass(1.0, final_samplerate, d_cutoff_freq, d_transition_bw));
+		lpf = std::make_shared<dsp::FIRBlock<complex_t>>(agc->output_stream, dsp::firdes::low_pass(1.0, final_samplerate, d_cutoff_freq, d_transition_bw));
 //
 //		logger->critical("Final samplerate after lpf: " + std::to_string(final_samplerate));
 //		logger->critical("Normal input samplerate after lpf : " + std::to_string(d_samplerate));
@@ -85,17 +85,17 @@ namespace analysis
 //
 //		//std::shared_ptr<dsp::stream<complex_t>> input_data_final = (d_frequency_shift != 0 ? freq_shift->output_stream : input_stream);
 //
-//		fft_splitter = std::make_shared<dsp::SplitterBlock>(lpf->output_stream);
-//		fft_splitter->add_output("lowPassFilter");
-//		fft_splitter->set_enabled("lowPassFilter", true);
-//
-//		fft_proc = std::make_shared<dsp::FFTPanBlock>(fft_splitter->get_output("lowPassFilter"));
-//		fft_proc->set_fft_settings(32768, final_samplerate, 120);
-//		//fft_proc->avg_num = 10;
-//		//fft_plot->enable_freq_scale;
-//		//fft_plot->bandwidth = final_samplerate;
-//		fft_plot = std::make_shared<widgets::FFTPlot>(fft_proc->output_stream->writeBuf, 32768, -20, 10, 10);
-//
+		fft_splitter = std::make_shared<dsp::SplitterBlock>(lpf->output_stream);
+		fft_splitter->add_output("lowPassFilter");
+		fft_splitter->set_enabled("lowPassFilter", true);
+
+		fft_proc = std::make_shared<dsp::FFTPanBlock>(fft_splitter->get_output("lowPassFilter"));
+		fft_proc->set_fft_settings(32768, final_samplerate, 120);
+		//fft_proc->avg_num = 10;
+		//fft_plot->enable_freq_scale;
+		//fft_plot->bandwidth = final_samplerate;
+		fft_plot = std::make_shared<widgets::FFTPlot>(fft_proc->output_stream->writeBuf, 32768, -20, 10, 10);
+
 	}
 
 	AnalysisPsk::~AnalysisPsk()
@@ -129,8 +129,8 @@ namespace analysis
 		complex_t *work_buffer_out = dsp::create_volk_buffer<complex_t>(d_buffer_size);
 		//res->start();
 		lpf->start();
-		//fft_splitter->start();
-		//fft_proc->start();
+		fft_splitter->start();
+		fft_proc->start();
 
 		//Buffer
 		complex_t *output_buffer = new complex_t[d_buffer_size * 200];
@@ -188,7 +188,7 @@ namespace analysis
 
 			int nout = res.process(lpf->output_stream->readBuf, dat_size, work_buffer_in);
 			{
-			volk_32fc_x2_multiply_32fc((lv_32fc_t *)exp_output, (lv_32fc_t *)work_buffer_out, (lv_32fc_t *)work_buffer_in, nout);
+			volk_32fc_x2_multiply_32fc((lv_32fc_t *)exp_output, (lv_32fc_t *)work_buffer_in, (lv_32fc_t *)work_buffer_in, nout);
 			}
 			//nout = lpf.process(work_buffer_in, nout, work_buffer_out);
 
@@ -334,7 +334,7 @@ namespace analysis
 	{
 		BaseDemodModule::stop();
 		//lpf->output_stream->stopReader();
-		res->stop();
+		//res->stop();
 		lpf->stop();
 		fft_splitter->stop();
 		fft_proc->stop();
