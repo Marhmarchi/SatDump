@@ -9,6 +9,12 @@
 #include "common/lua/lua_utils.h"
 #include "common/calibration.h"
 #include "core/plugin.h"
+#include "common/utils.h"
+
+#ifdef __ANDROID__
+#include <android_native_app_glue.h>
+extern struct android_app *g_App;
+#endif
 
 namespace satdump
 {
@@ -98,11 +104,55 @@ namespace satdump
         if (contents.contains("save_as_matrix"))
             save_as_matrix = contents["save_as_matrix"].get<bool>();
 
+#ifdef __ANDROID__
+        JavaVM *java_vm = g_App->activity->vm;
+        JNIEnv *java_env = NULL;
+
+        jint jni_return = java_vm->GetEnv((void **)&java_env, JNI_VERSION_1_6);
+        if (jni_return == JNI_ERR)
+            throw std::runtime_error("Could not get JNI environement");
+
+        jni_return = java_vm->AttachCurrentThread(&java_env, NULL);
+        if (jni_return != JNI_OK)
+            throw std::runtime_error("Could not attach to thread");
+
+        jclass activityClass = java_env->FindClass( "android/app/NativeActivity" );
+        jmethodID getCacheDir = java_env->GetMethodID( activityClass, "getCacheDir", "()Ljava/io/File;" );
+        jobject cache_dir = java_env->CallObjectMethod( g_App->activity->clazz, getCacheDir );
+
+        jclass fileClass = java_env->FindClass( "java/io/File" );
+        jmethodID getPath = java_env->GetMethodID( fileClass, "getPath", "()Ljava/lang/String;" );
+        jstring path_string = (jstring)java_env->CallObjectMethod( cache_dir, getPath );
+
+        const char *path_chars = java_env->GetStringUTFChars( path_string, NULL );
+        std::string tmp_path( path_chars );
+
+        java_env->ReleaseStringUTFChars( path_string, path_chars );
+        jni_return = java_vm->DetachCurrentThread();
+        if (jni_return != JNI_OK)
+            throw std::runtime_error("Could not detach from thread");
+#else
+        std::string tmp_path = std::filesystem::temp_directory_path().string();
+#endif
+
         image::Image<uint16_t> img_matrix;
         if (save_as_matrix)
         {
-            if (std::filesystem::exists(directory + "/" + contents["images"][0]["file"].get<std::string>()))
-                img_matrix.load_img(directory + "/" + contents["images"][0]["file"].get<std::string>());
+            if (file.find("http") == 0)
+            {
+                std::string res;
+                if (perform_http_request(directory + "/" + contents["images"][0]["file"].get<std::string>(), res))
+                    throw std::runtime_error("Could not download from : " + directory + "/" + contents["images"][0]["file"].get<std::string>());
+                std::ofstream(tmp_path + "/satdumpdltmp.tmp", std::ios::binary).write((char *)res.data(), res.size());
+                img_matrix.load_img(tmp_path + "/satdumpdltmp.tmp");
+                if (std::filesystem::exists(tmp_path + "/satdumpdltmp.tmp"))
+                    std::filesystem::remove(tmp_path + "/satdumpdltmp.tmp");
+            }
+            else
+            {
+                if (std::filesystem::exists(directory + "/" + contents["images"][0]["file"].get<std::string>()))
+                    img_matrix.load_img(directory + "/" + contents["images"][0]["file"].get<std::string>());
+            }
         }
 
         for (size_t c = 0; c < contents["images"].size(); c++)
@@ -116,8 +166,21 @@ namespace satdump
 
             if (!save_as_matrix)
             {
-                if (std::filesystem::exists(directory + "/" + contents["images"][c]["file"].get<std::string>()))
-                    img_holder.image.load_img(directory + "/" + contents["images"][c]["file"].get<std::string>());
+                if (file.find("http") == 0)
+                {
+                    std::string res;
+                    if (perform_http_request(directory + "/" + contents["images"][c]["file"].get<std::string>(), res))
+                        throw std::runtime_error("Could not download from : " + directory + "/" + contents["images"][c]["file"].get<std::string>());
+                    std::ofstream(tmp_path + "/satdumpdltmp.tmp", std::ios::binary).write((char *)res.data(), res.size());
+                    img_holder.image.load_img(tmp_path + "/satdumpdltmp.tmp");
+                    if (std::filesystem::exists(tmp_path + "/satdumpdltmp.tmp"))
+                        std::filesystem::remove(tmp_path + "/satdumpdltmp.tmp");
+                }
+                else
+                {
+                    if (std::filesystem::exists(directory + "/" + contents["images"][c]["file"].get<std::string>()))
+                        img_holder.image.load_img(directory + "/" + contents["images"][c]["file"].get<std::string>());
+                }
             }
             else
             {

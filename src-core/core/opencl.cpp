@@ -8,6 +8,13 @@ namespace satdump
 {
     namespace opencl
     {
+        cl_context ocl_context;
+        cl_device_id ocl_device;
+
+        bool context_is_init = false;
+        int platform_id, device_id;
+        std::map<std::string, cl_program> cached_kernels;
+
         std::vector<OCLDevice> getAllDevices()
         {
             std::vector<OCLDevice> devs;
@@ -36,20 +43,30 @@ namespace satdump
 
         void initOpenCL()
         {
-            std::vector<OCLDevice> devices = getAllDevices();
+#ifdef __ANDROID__
+            if(OpenCLHelper::Loader::Init())
+            {
+                logger->debug("Failed to init OpenCL!");
+                platform_id = device_id = -1;
+                return;
+            }
+#endif
+            std::vector<OCLDevice> devices = resetOCLContext();
             logger->info("Found OpenCL Devices (%d) :", devices.size());
             for (OCLDevice &d : devices)
                 logger->debug(" - " + d.name.substr(0, d.name.size() - 1));
         }
 
-        bool context_is_init = false;
-        cl_context ocl_context;
-        cl_device_id ocl_device;
-
         void setupOCLContext()
         {
-            int platform_id = satdump::config::main_cfg["satdump_general"]["opencl_device"]["platform"].get<int>();
-            int device_id = satdump::config::main_cfg["satdump_general"]["opencl_device"]["device"].get<int>();
+            if (context_is_init)
+            {
+                logger->trace("OpenCL context already initilized.");
+                return;
+            }
+
+            if(platform_id == -1)
+                throw std::runtime_error("User specified CPU processing");
 
             cl_platform_id platforms_ids[100];
             cl_uint platforms_cnt = 0;
@@ -59,57 +76,69 @@ namespace satdump
             size_t device_platform_name_len = 0;
             cl_int err = 0;
 
-            if (!context_is_init)
-            {
-                logger->trace("First OpenCL context request. Initializing...");
+            logger->trace("First OpenCL context request. Initializing...");
 
-                if (clGetPlatformIDs(100, platforms_ids, &platforms_cnt) != CL_SUCCESS)
-                {
-                    logger->error("Could not get OpenCL platform IDs!");
-                    return;
-                }
+            if (clGetPlatformIDs(100, platforms_ids, &platforms_cnt) != CL_SUCCESS)
+                throw std::runtime_error("Could not get OpenCL platform IDs!");
 
-                if (platforms_cnt == 0)
-                    std::runtime_error("No platforms found. Check OpenCL installation!");
+            if (platforms_cnt == 0)
+                throw std::runtime_error("No platforms found. Check OpenCL installation!");
 
-                cl_platform_id platform = platforms_ids[platform_id];
-                if (clGetPlatformInfo(platform, CL_PLATFORM_NAME, 200, device_platform_name, &device_platform_name_len) == CL_SUCCESS)
-                    logger->info("Using platform: %s", std::string(&device_platform_name[0], &device_platform_name[device_platform_name_len]).c_str());
-                else
-                    logger->error("Could not get platform name!");
-
-                if (clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 100, devices_ids, &devices_cnt) != CL_SUCCESS)
-                {
-                    logger->error("Could not get OpenCL devices IDs!");
-                    return;
-                }
-
-                if (devices_cnt == 0)
-                    std::runtime_error("No devices found. Check OpenCL installation!");
-
-                ocl_device = devices_ids[device_id];
-                if (clGetDeviceInfo(ocl_device, CL_DEVICE_NAME, 200, device_platform_name, &device_platform_name_len) == CL_SUCCESS)
-                    logger->info("Using device: %s", std::string(&device_platform_name[0], &device_platform_name[device_platform_name_len]).c_str());
-
-                ocl_context = clCreateContext(NULL, 1, &ocl_device, NULL, NULL, &err);
-                if (err != CL_SUCCESS)
-                {
-                    logger->error("Could not init OpenCL context!");
-                    return;
-                }
-
-                context_is_init = true;
-            }
+            cl_platform_id platform = platforms_ids[platform_id];
+            if (clGetPlatformInfo(platform, CL_PLATFORM_NAME, 200, device_platform_name, &device_platform_name_len) == CL_SUCCESS)
+                logger->info("Using platform: %s", std::string(&device_platform_name[0], &device_platform_name[device_platform_name_len]).c_str());
             else
-            {
-                logger->trace("OpenCL context already initilized.");
-            }
+                logger->error("Could not get platform name!");
 
-            if (!context_is_init)
-                throw std::runtime_error("OpenCL context not initialized!");
+            if (clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 100, devices_ids, &devices_cnt) != CL_SUCCESS)
+                throw std::runtime_error("Could not get OpenCL devices IDs!");
+
+            if (devices_cnt == 0)
+                throw std::runtime_error("No devices found. Check OpenCL installation!");
+
+            ocl_device = devices_ids[device_id];
+            if (clGetDeviceInfo(ocl_device, CL_DEVICE_NAME, 200, device_platform_name, &device_platform_name_len) == CL_SUCCESS)
+                logger->info("Using device: %s", std::string(&device_platform_name[0], &device_platform_name[device_platform_name_len]).c_str());
+
+            ocl_context = clCreateContext(NULL, 1, &ocl_device, NULL, NULL, &err);
+            if (err != CL_SUCCESS)
+                throw std::runtime_error("Could not init OpenCL context!");
+
+            context_is_init = true;
         }
 
-        std::map<std::string, cl_program> cached_kernels;
+        std::vector<OCLDevice> resetOCLContext()
+        {
+            if (context_is_init)
+            {
+                context_is_init = false;
+                for (auto& kernel : cached_kernels)
+                {
+                    int ret = clReleaseProgram(kernel.second);
+                    if(ret != CL_SUCCESS)
+                        logger->error("Could not release CL program! Code %d", ret);
+                }
+
+                cached_kernels.clear();
+                int ret = clReleaseContext(ocl_context);
+                if (ret != CL_SUCCESS)
+                    logger->error("Could not release old context! Code %d", ret);
+            }
+
+            platform_id = satdump::config::main_cfg["satdump_general"]["opencl_device"]["platform"].get<int>();
+            device_id = satdump::config::main_cfg["satdump_general"]["opencl_device"]["device"].get<int>();
+
+            std::vector<OCLDevice> devices = getAllDevices();
+            if (devices.empty())
+                platform_id = device_id = -1;
+
+            return devices;
+        }
+
+        bool useCL()
+        {
+            return platform_id >= 0;
+        }
 
         cl_program buildCLKernel(std::string path, bool use_cache)
         {

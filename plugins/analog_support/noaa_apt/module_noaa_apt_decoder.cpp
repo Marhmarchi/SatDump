@@ -6,6 +6,7 @@
 #include "common/utils.h"
 #include "products/image_products.h"
 #include "products/dataset.h"
+#include "nlohmann/json_utils.h"
 
 #include "common/dsp/filter/firdes.h"
 #include "resources.h"
@@ -59,6 +60,8 @@ namespace noaa_apt
             filesize = getFilesize(d_input_file);
         else
             filesize = 0;
+
+        std::string main_dir = d_output_file_hint.substr(0, d_output_file_hint.rfind('/'));
 
         bool is_stereo = false;
 
@@ -522,6 +525,9 @@ namespace noaa_apt
         int first_valid_line = 0;
         int last_valid_line = wip_apt_image_sync.height();
 
+        // Save RAW before we crop
+        wip_apt_image_sync.save_img(main_dir + "/raw");
+
         if (d_autocrop_wedges)
         {
             logger->info("Autocropping using wedges...");
@@ -569,10 +575,7 @@ namespace noaa_apt
         }
 
         // Save
-        std::string main_dir = d_output_file_hint.substr(0, d_output_file_hint.rfind('/'));
-
         apt_status = SAVING;
-        wip_apt_image_sync.save_img(main_dir + "/raw");
 
         // Products ARE not yet being processed properly. Need to parse the wedges!
         int norad = 0;
@@ -1035,7 +1038,7 @@ namespace noaa_apt
 
     void NOAAAPTDecoderModule::drawUI(bool window)
     {
-        ImGui::Begin("NOAA APT Decoder (WIP!)", NULL, window ? 0 : NOWINDOW_FLAGS);
+        ImGui::Begin("NOAA APT Decoder", NULL, window ? 0 : NOWINDOW_FLAGS);
 
         ImGui::BeginGroup();
         {

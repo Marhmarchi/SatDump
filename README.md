@@ -119,7 +119,7 @@ git clone -b v1.6.0 https://github.com/nanomsg/nng
 cd nng
 mkdir build && cd build
 cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DNNG_ENABLE_TLS=ON ..
-make -j`nproc`
+make -j$(sysctl -n hw.logicalcpu)
 sudo make install
 cd ../..
 
@@ -128,7 +128,7 @@ git clone https://github.com/airspy/airspyhf.git
 cd airspyhf
 mkdir build && cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
-make -j`nproc`
+make -j$(sysctl -n hw.logicalcpu)
 sudo make install
 cd ../..
 
@@ -139,7 +139,7 @@ mkdir build && cd build
 # If you do not want to build the GUI Version, add -DBUILD_GUI=OFF to the command
 # If you want to disable some SDRs, you can add -DPLUGIN_HACKRF_SDR_SUPPORT=OFF or similar
 cmake -DCMAKE_BUILD_TYPE=Release ..
-make -j`nproc`
+make -j$(sysctl -n hw.logicalcpu)
 
 # To run without installing
 ln -s ../pipelines .        # Symlink pipelines so it can run
@@ -171,7 +171,7 @@ sudo apt install ocl-icd-opencl-dev                                             
 sudo apt install intel-opencl-icd                                                                # Optional, enables OpenCL for Intel Integrated Graphics
 
 # Install dependencies on Red-Hat-based systems:
-sudo dnf install git cmake g++ fftw-devel volk-devel libpng-devel
+sudo dnf install git cmake g++ fftw-devel volk-devel libpng-devel jemalloc-devel
 sudo dnf install nng-devel
 sudo dnf install rtl-sdr-devel hackrf-devel airspyone_host-devel
 sudo dnf install glfw-devel

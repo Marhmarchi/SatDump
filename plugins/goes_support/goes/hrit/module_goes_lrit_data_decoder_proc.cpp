@@ -70,8 +70,15 @@ namespace goes
             ::lrit::PrimaryHeader primary_header = file.getHeader<::lrit::PrimaryHeader>();
             NOAALRITHeader noaa_header = file.getHeader<NOAALRITHeader>();
 
+            // Handle LRIT files with no data
+            if (primary_header.total_header_length == file.lrit_data.size())
+            {
+                logger->warn("Received LRIT header with no body! Saving as .lrit");
+                saveLRITFile(file, directory + "/LRIT");
+            }
+
             // Check if this is image data, and if so also write it as an image
-            if (write_images && primary_header.file_type_code == 0 && file.hasHeader<::lrit::ImageStructureRecord>())
+            else if (write_images && primary_header.file_type_code == 0 && file.hasHeader<::lrit::ImageStructureRecord>())
             {
                 if (!std::filesystem::exists(directory + "/IMAGES"))
                     std::filesystem::create_directory(directory + "/IMAGES");
@@ -145,16 +152,16 @@ namespace goes
                                 //Configure mesoscale color compoer - FD is defined further down
                                 if ((region == "Mesoscale 1" || region == "Mesoscale 2"))
                                 {
-                                    std::shared_ptr<GOESRFalseColorComposer> goes_r_fc_composer;
+                                    GOESRFalseColorComposer *goes_r_fc_composer;
 
                                     if (region == "Mesoscale 1")
-                                        goes_r_fc_composer = goes_r_fc_composer_meso1;
+                                        goes_r_fc_composer = &goes_r_fc_composer_meso1;
                                     else if (region == "Mesoscale 2")
-                                        goes_r_fc_composer = goes_r_fc_composer_meso2;
+                                        goes_r_fc_composer = &goes_r_fc_composer_meso2;
 
-                                    image::Image<uint8_t> image(&file.lrit_data[primary_header.total_header_length],
-                                                                image_structure_record.columns_count,
-                                                                image_structure_record.lines_count, 1);
+                                    std::shared_ptr<image::Image<uint8_t>> image = std::make_shared<image::Image<uint8_t>> (&file.lrit_data[primary_header.total_header_length],
+                                                                                                                            image_structure_record.columns_count,
+                                                                                                                            image_structure_record.lines_count, 1);
 
                                     if (channel == 2)
                                     {
@@ -276,22 +283,24 @@ namespace goes
                         {
                             wip_img->imageStatus = SAVING;
                             if (is_goesn)
-                                segmentedDecoder.image.resize(segmentedDecoder.image.width(), segmentedDecoder.image.height() * 1.75);
-                            segmentedDecoder.image.save_img(std::string(directory + "/IMAGES/" + segmentedDecoder.filename).c_str());
+                                segmentedDecoder.image->resize(segmentedDecoder.image->width(), segmentedDecoder.image->height() * 1.75);
+                            segmentedDecoder.image->save_img(std::string(directory + "/IMAGES/" + segmentedDecoder.filename).c_str());
                             wip_img->imageStatus = RECEIVING;
                         }
 
                         segmentedDecoder = SegmentedLRITImageDecoder(segment_id_header.max_segment,
-                                                                     image_structure_record.columns_count,
-                                                                     image_structure_record.lines_count,
+                                                                     segment_id_header.max_column,
+                                                                     segment_id_header.max_row,
                                                                      segment_id_header.image_identifier);
                         segmentedDecoder.filename = current_filename;
                     }
 
                     if (noaa_header.product_id == ID_HIMAWARI)
-                        segmentedDecoder.pushSegment(&file.lrit_data[primary_header.total_header_length], segment_id_header.segment_sequence_number - 1);
+                        segmentedDecoder.pushSegment(&file.lrit_data[primary_header.total_header_length],
+                            file.lrit_data.size() - primary_header.total_header_length, segment_id_header.segment_sequence_number - 1);
                     else
-                        segmentedDecoder.pushSegment(&file.lrit_data[primary_header.total_header_length], segment_id_header.segment_sequence_number);
+                        segmentedDecoder.pushSegment(&file.lrit_data[primary_header.total_header_length],
+                            file.lrit_data.size() - primary_header.total_header_length, segment_id_header.segment_sequence_number);
 
                     // Check if this is GOES-R, if yes, this is Full Disk
                     if (primary_header.file_type_code == 0 && (noaa_header.product_id == 16 ||
@@ -318,16 +327,16 @@ namespace goes
 
                                 if (channel == 2)
                                 {
-                                    goes_r_fc_composer_full_disk->push2(segmentedDecoder.image, timegm(&scanTimestamp));
+                                    goes_r_fc_composer_full_disk.push2(segmentedDecoder.image, timegm(&scanTimestamp));
                                     std::string subdir = "GOES-" + std::to_string(noaa_header.product_id) + "/Full Disk";
-                                    goes_r_fc_composer_full_disk->filename = subdir + "/" + getHRITImageFilename(&scanTimestamp, "G" + std::to_string(noaa_header.product_id), "FC");
+                                    goes_r_fc_composer_full_disk.filename = subdir + "/" + getHRITImageFilename(&scanTimestamp, "G" + std::to_string(noaa_header.product_id), "FC");
                                 }
 
                                 else if (channel == 13 && file.vcid == 13) //Redundant check keeps relayed channel 13 from entering the color composer
                                 {
-                                    goes_r_fc_composer_full_disk->push13(segmentedDecoder.image, timegm(&scanTimestamp));
+                                    goes_r_fc_composer_full_disk.push13(segmentedDecoder.image, timegm(&scanTimestamp));
                                     std::string subdir = "GOES-" + std::to_string(noaa_header.product_id) + "/Full Disk";
-                                    goes_r_fc_composer_full_disk->filename = subdir + "/" + getHRITImageFilename(&scanTimestamp, "G" + std::to_string(noaa_header.product_id), "FC");
+                                    goes_r_fc_composer_full_disk.filename = subdir + "/" + getHRITImageFilename(&scanTimestamp, "G" + std::to_string(noaa_header.product_id), "FC");
                                 }
 
 
@@ -341,7 +350,7 @@ namespace goes
                         // Downscale image
                         wip_img->img_height = 1000;
                         wip_img->img_width = 1000;
-                        image::Image<uint8_t> imageScaled = segmentedDecoder.image;
+                        image::Image<uint8_t> imageScaled = *(segmentedDecoder.image);
                         imageScaled.resize(wip_img->img_width, wip_img->img_height);
                         uchar_to_rgba(imageScaled.data(), wip_img->textureBuffer, wip_img->img_height * wip_img->img_width);
                         wip_img->hasToUpdate = true;
@@ -351,8 +360,8 @@ namespace goes
                     {
                         wip_img->imageStatus = SAVING;
                         if (is_goesn)
-                            segmentedDecoder.image.resize(segmentedDecoder.image.width(), segmentedDecoder.image.height() * 1.75);
-                        segmentedDecoder.image.save_img(std::string(directory + "/IMAGES/" + current_filename).c_str());
+                            segmentedDecoder.image->resize(segmentedDecoder.image->width(), segmentedDecoder.image->height() * 1.75);
+                        segmentedDecoder.image->save_img(std::string(directory + "/IMAGES/" + current_filename).c_str());
                         segmentedDecoder = SegmentedLRITImageDecoder();
                         wip_img->imageStatus = IDLE;
 
@@ -369,8 +378,8 @@ namespace goes
                             {
                                 if (sscanf(cutFilename[3].c_str(), "M%dC%02d", &mode, &channel) == 2)
                                 {
-                                    if (goes_r_fc_composer_full_disk->hasData && channel == 2)
-                                        goes_r_fc_composer_full_disk->save();
+                                    if (channel == 2)
+                                        goes_r_fc_composer_full_disk.save();
                                 }
                             }
                         }
@@ -416,10 +425,8 @@ namespace goes
                                                                    noaa_header.product_id == 18 ||
                                                                    noaa_header.product_id == 19))
                         {
-                            if (goes_r_fc_composer_meso1->hasData)
-                                goes_r_fc_composer_meso1->save();
-                            if (goes_r_fc_composer_meso2->hasData)
-                                goes_r_fc_composer_meso2->save();
+                            goes_r_fc_composer_meso1.save();
+                            goes_r_fc_composer_meso2.save();
                         }
                     }
                 }
