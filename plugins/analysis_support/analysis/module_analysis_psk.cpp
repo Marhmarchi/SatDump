@@ -202,6 +202,7 @@ namespace analysis
 
 			//// f32 to fc32
 			//volk_32f_x2_interleave_32fc((lv_32fc_t *)fc_buffer, (float *)real, (float *)imag, dat_size/* * sizeof(complex_t)*/);
+			//volk_32f_x2_interleave_32fc((lv_32fc_t *)fc_buffer, (float *)lpf->output_stream->readBuf, (float *)lpf->output_stream->readBuf, dat_size/* * sizeof(complex_t)*/);
 
 
 			// Exponentiate
@@ -232,42 +233,42 @@ namespace analysis
 			// Multiply conjugate - Offset //
 			//
 			// Complex to Float
-			volk_32fc_deinterleave_32f_x2((float *)f32_real, (float *)f32_imag, (lv_32fc_t *)lpf->output_stream->readBuf, dat_size);
-
-
-			// Delay imaginary branch by 1 sample
-			for (int i = 0; i < dat_size; i++)
-			{
-				f32_delayed[i] = i == 0 ? f32_last_samp : f32_imag[i - 1];
-				//f32_non_delayed[i] = f32_imag[i];
-			}
-
-			f32_last_samp = f32_imag[dat_size - 1];
-
-
-			// Convert the delyed imag float and (non delayed) real float to complex 
-			volk_32f_x2_interleave_32fc((lv_32fc_t *)fc32, (float *)f32_real, (float *)f32_delayed, dat_size);
-
-			// Now we perform the normal Multiply Conjugate with the offsetted input fc32
-			//
-			// Duplicate and delay one stream
-			for (int i = 0; i < dat_size; i++)
-			{
-				fc32_delayed[i] = i == 0 ? last_samp : fc32[i - 1];
-				// Get not delayed stream to avoid desync as a sanity measure
-				fc32_not_delayed[i] = fc32[i];
-			}
-
-			last_samp = fc32[dat_size - 1];
-
-			// Multiply conjugate
-			volk_32fc_x2_multiply_conjugate_32fc((lv_32fc_t *)fc32_mul_n_conj, (lv_32fc_t *)fc32_not_delayed, (lv_32fc_t *)fc32_delayed, dat_size);
-
-			// Complex to Mag
-			volk_32fc_magnitude_32f((float *)f32_mag, (lv_32fc_t *)fc32_mul_n_conj, dat_size / 2);
-
-			// Real to Complex
-			volk_32f_x2_interleave_32fc((lv_32fc_t *)fc32_mul_n_conj_offset, (float *)f32_mag, (float *)f32_mag, dat_size);
+			//volk_32fc_deinterleave_32f_x2((float *)f32_real, (float *)f32_imag, (lv_32fc_t *)lpf->output_stream->readBuf, dat_size);
+                        //
+                        //
+			//// Delay imaginary branch by 1 sample
+			//for (int i = 0; i < dat_size; i++)
+			//{
+			//	f32_delayed[i] = i == 0 ? f32_last_samp : f32_imag[i - 1];
+			//	//f32_non_delayed[i] = f32_imag[i];
+			//}
+                        //
+			//f32_last_samp = f32_imag[dat_size - 1];
+                        //
+                        //
+			//// Convert the delyed imag float and (non delayed) real float to complex 
+			//volk_32f_x2_interleave_32fc((lv_32fc_t *)fc32, (float *)f32_real, (float *)f32_delayed, dat_size);
+                        //
+			//// Now we perform the normal Multiply Conjugate with the offsetted input fc32
+			////
+			//// Duplicate and delay one stream
+			//for (int i = 0; i < dat_size; i++)
+			//{
+			//	fc32_delayed[i] = i == 0 ? last_samp : fc32[i - 1];
+			//	// Get not delayed stream to avoid desync as a sanity measure
+			//	fc32_not_delayed[i] = fc32[i];
+			//}
+                        //
+			//last_samp = fc32[dat_size - 1];
+                        //
+			//// Multiply conjugate
+			//volk_32fc_x2_multiply_conjugate_32fc((lv_32fc_t *)fc32_mul_n_conj, (lv_32fc_t *)fc32_not_delayed, (lv_32fc_t *)fc32_delayed, dat_size);
+                        //
+			//// Complex to Mag
+			//volk_32fc_magnitude_32f((float *)f32_mag, (lv_32fc_t *)fc32_mul_n_conj, dat_size / 2);
+                        //
+			//// Real to Complex
+			//volk_32f_x2_interleave_32fc((lv_32fc_t *)fc32_mul_n_conj_offset, (float *)f32_mag, (float *)f32_mag, dat_size);
 		
 
 
@@ -278,7 +279,7 @@ namespace analysis
 
 			if (output_data_type == DATA_FILE)
 			{
-				data_out.write((char *)fc32_mul_n_conj_offset, dat_size * sizeof(complex_t));
+				data_out.write((char *)lpf->output_stream->readBuf, dat_size * sizeof(complex_t));
 				//////data_out.write((char *)expTwo_output, dat_size * sizeof(complex_t));
 				//data_out.write((char *)multConj_output, dat_size * sizeof(complex_t));
 				//data_out.write((char *)output_wav_buffer, dat_size * sizeof(int16_t) * 2);
