@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0.0)
+cmake_minimum_required(VERSION 3.12)
 include(CheckLibraryExists)
 include(CheckIncludeFileCXX)
 include(CheckCSourceCompiles)
@@ -99,11 +99,12 @@ elseif(ANDROID)
 
     target_include_directories(satdump_core PUBLIC libs/lua)
 else()
-    # Jemalloc
-    pkg_check_modules(JEMALLOC jemalloc)
-    pkg_search_module(JEMALLOC REQUIRED jemalloc)
-    include_directories(${JEMALLOC_INCLUDE_DIRS})
-    target_link_libraries(satdump_core PUBLIC ${JEMALLOC_LIBRARIES})
+    if(NOT APPLE)
+        # Jemalloc
+        find_package(Jemalloc REQUIRED)
+        target_include_directories(satdump_core PUBLIC ${JEMALLOC_INCLUDE_DIR})
+        target_link_libraries(satdump_core PUBLIC ${JEMALLOC_LIBRARY})
+    endif()
 
     # VOLK
     pkg_check_modules(VOLK REQUIRED volk)

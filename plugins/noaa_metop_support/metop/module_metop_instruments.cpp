@@ -144,7 +144,7 @@ namespace metop
 
             data_in.close();
 
-            int scid = most_common(metop_scids.begin(), metop_scids.end());
+            int scid = most_common(metop_scids.begin(), metop_scids.end(), 0);
             metop_scids.clear();
 
             std::string sat_name = "Unknown MetOp";

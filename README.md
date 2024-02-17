@@ -89,18 +89,13 @@ Our builds are made with Visual Studio 2019 for x64, so the appropriate Visual C
 For compilation information, see the dedicated documentation [here](/docs/Building-Windows.md). *Note : Mingw builds are NOT supported, VOLK will not work.*
 
 ### macOS
-Dependency-free Intel (x64) macOS builds are provided on the [releases page](https://github.com/altillimity/SatDump/releases) (Thanks to JVital2013, the builds are also signed!).
-
-While those will work for Apple Silicon (M1/M2) Macs, it is NOT recommended as performance will suffer greatly compared to natively-compiled builds. Pre-compiled ARM/Universal builds are planned.
+Dependency-free macOS builds are provided on the [releases page](https://github.com/altillimity/SatDump/releases) (Thanks to JVital2013, the builds are also signed!).
 
 General build instructions (Brew and XCode command line tools required)
 
 ```bash
 # Install dependencies
 brew install cmake volk jpeg libpng glfw airspy rtl-sdr hackrf mbedtls pkg-config libomp dylibbundler portaudio jemalloc
-
-# On Apple Silicon also run
-brew link --force libomp
 
 # Build and install libfftw3 to work around issue with brew version
 wget http://www.fftw.org/fftw-3.3.9.tar.gz
@@ -164,15 +159,16 @@ On Linux, building from source is recommended, but builds are provided for x64-b
 
 ```bash
 # Install dependencies on Debian-based systems:
-sudo apt install git build-essential cmake g++ pkgconf libfftw3-dev libvolk2-dev libpng-dev libjemalloc-dev   # Core dependencies. If libvolk2-dev is not available, use libvolk1-dev
-sudo apt install libnng-dev                                                                                   # If this package is not found, follow build instructions below for NNG
-sudo apt install librtlsdr-dev libhackrf-dev libairspy-dev libairspyhf-dev                                    # All libraries required for live processing (optional)
-sudo apt install libglfw3-dev                                                                                 # Only if you want to build the GUI Version (optional)
-sudo apt install libzstd-dev                                                                                  # Only if you want to build with ZIQ Recording compression 
-(optional)
-sudo apt install libomp-dev                                                                                   # Shouldn't be required in general, but in case you have errors with OMP
-sudo apt install ocl-icd-opencl-dev                                                                           # Optional, but recommended as it drastically increases speed of some operations. Installs OpenCL.
-sudo apt install intel-opencl-icd                                                                             # Optional, enables OpenCL for Intel Integrated Graphics
+sudo apt install git build-essential cmake g++ pkgconf libfftw3-dev libpng-dev libjemalloc-dev   # Core dependencies
+sudo apt install libvolk2-dev                                                                    # If this package is not found, use libvolk-dev or libvolk1-dev
+sudo apt install libnng-dev                                                                      # If this package is not found, follow build instructions below for NNG
+sudo apt install librtlsdr-dev libhackrf-dev libairspy-dev libairspyhf-dev                       # All libraries required for live processing (optional)
+sudo apt install libglfw3-dev                                                                    # Only if you want to build the GUI Version (optional)
+sudo apt install libzstd-dev                                                                     # Only if you want to build with ZIQ Recording compression
+# (optional)
+sudo apt install libomp-dev                                                                      # Shouldn't be required in general, but in case you have errors with OMP
+sudo apt install ocl-icd-opencl-dev                                                              # Optional, but recommended as it drastically increases speed of some operations. Installs OpenCL.
+sudo apt install intel-opencl-icd                                                                # Optional, enables OpenCL for Intel Integrated Graphics
 
 # Install dependencies on Red-Hat-based systems:
 sudo dnf install git cmake g++ fftw-devel volk-devel libpng-devel
@@ -180,7 +176,7 @@ sudo dnf install nng-devel
 sudo dnf install rtl-sdr-devel hackrf-devel airspyone_host-devel
 sudo dnf install glfw-devel
 sudo dnf install libzstd-devel
-(optional)
+# (optional)
 sudo dnf install libomp-devel
 sudo dnf install ocl-icd                                                                                      # Optional, but recommended as it drastically increases speed of some operations. Installs OpenCL.
 sudo dnf install intel-opencl                                                                                 # Optional, enables OpenCL for Intel Integrated Graphics

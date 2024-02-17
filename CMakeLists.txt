@@ -52,6 +52,11 @@ if(APPLE)
         link_directories(/opt/homebrew/lib/)
     endif()
 
+    # Jemalloc
+    find_package(Jemalloc REQUIRED)
+    include_directories(${JEMALLOC_INCLUDE_DIR})
+    link_libraries(${JEMALLOC_LIBRARY})
+
 endif()
 
 
@@ -64,9 +69,12 @@ if(UNIX)
         message("Compiling with OpenMP support!")
 
         if(APPLE)
-            # set(CMAKE_C_COMPILER "/usr/local/opt/llvm/bin/clang")
-            # set(CMAKE_CXX_COMPILER "/usr/local/opt/llvm/bin/clang++")
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xpreprocessor -fopenmp -I/usr/local/opt/llvm/include -I/usr/local/opt/libomp/include -L/usr/local/opt/libomp/lib")
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-command-line-argument -Xpreprocessor -fopenmp -I/usr/local/opt/llvm/include")
+            if(CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
+                set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I/opt/homebrew/opt/libomp/include -L/opt/homebrew/opt/libomp/lib")
+            else()
+                set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I/usr/local/opt/libomp/include -L/usr/local/opt/libomp/lib")
+            endif()
         else()
             set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
         endif()
