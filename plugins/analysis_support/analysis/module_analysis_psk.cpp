@@ -1,4 +1,5 @@
 #include "module_analysis_psk.h"
+#include "common/dsp/buffer.h"
 #include "common/dsp/fft/fft_pan.h"
 #include "common/dsp/io/wav_writer.h"
 #include "common/dsp/path/splitter.h"
@@ -56,45 +57,45 @@ namespace analysis
 	void AnalysisPsk::init()
 	{
 		BaseDemodModule::initb();
-
-		int interpol = 2;
-
-		logger->critical("Final samplerate BEFORE everything: " + std::to_string(final_samplerate));
-		logger->critical("Normal samplerate BEFORE everything: " + std::to_string(d_samplerate));
-
-
-		// Resampler
-		res = std::make_shared<dsp::RationalResamplerBlock<complex_t>>(agc->output_stream, interpol, 1/*d_symbolrate, final_samplerate*/);
-
-		//final_samplerate = d_samplerate * interpol;
-		logger->critical("Final samplerate after res: " + std::to_string(final_samplerate));
-		logger->critical("Normal input samplerate after res : " + std::to_string(d_samplerate));
-
-
-		// Low pass filter
-		lpf = std::make_shared<dsp::FIRBlock<complex_t>>(res->output_stream, dsp::firdes::low_pass(1.0, final_samplerate * 2, d_cutoff_freq, d_transition_bw));
-
-		logger->critical("Final samplerate after lpf: " + std::to_string(final_samplerate));
-		logger->critical("Normal input samplerate after lpf : " + std::to_string(d_samplerate));
-
-
-		// Real To Complex
-		//rtc = std::make_shared<dsp::RealToComplexBlock>(res->output_stream);
-
-
-		//std::shared_ptr<dsp::stream<complex_t>> input_data_final = (d_frequency_shift != 0 ? freq_shift->output_stream : input_stream);
-
-		fft_splitter = std::make_shared<dsp::SplitterBlock>(lpf->output_stream);
-		fft_splitter->add_output("lowPassFilter");
-		fft_splitter->set_enabled("lowPassFilter", true);
-
-		fft_proc = std::make_shared<dsp::FFTPanBlock>(fft_splitter->get_output("lowPassFilter"));
-		fft_proc->set_fft_settings(32768, final_samplerate, 120);
-		//fft_proc->avg_num = 10;
-		//fft_plot->enable_freq_scale;
-		//fft_plot->bandwidth = final_samplerate;
-		fft_plot = std::make_shared<widgets::FFTPlot>(fft_proc->output_stream->writeBuf, 32768, -20, 10, 10);
-
+//
+//		int interpol = 2;
+//
+//		logger->critical("Final samplerate BEFORE everything: " + std::to_string(final_samplerate));
+//		logger->critical("Normal samplerate BEFORE everything: " + std::to_string(d_samplerate));
+//
+//
+//		// Resampler
+//		res = std::make_shared<dsp::RationalResamplerBlock<complex_t>>(agc->output_stream, interpol, 1/*d_symbolrate, final_samplerate*/);
+//
+//		//final_samplerate = d_samplerate * interpol;
+//		logger->critical("Final samplerate after res: " + std::to_string(final_samplerate));
+//		logger->critical("Normal input samplerate after res : " + std::to_string(d_samplerate));
+//
+//
+//		// Low pass filter
+		lpf = std::make_shared<dsp::FIRBlock<complex_t>>(nullptr, dsp::firdes::low_pass(1.0, final_samplerate, d_cutoff_freq, d_transition_bw));
+//
+//		logger->critical("Final samplerate after lpf: " + std::to_string(final_samplerate));
+//		logger->critical("Normal input samplerate after lpf : " + std::to_string(d_samplerate));
+//
+//
+//		// Real To Complex
+//		//rtc = std::make_shared<dsp::RealToComplexBlock>(res->output_stream);
+//
+//
+//		//std::shared_ptr<dsp::stream<complex_t>> input_data_final = (d_frequency_shift != 0 ? freq_shift->output_stream : input_stream);
+//
+//		fft_splitter = std::make_shared<dsp::SplitterBlock>(lpf->output_stream);
+//		fft_splitter->add_output("lowPassFilter");
+//		fft_splitter->set_enabled("lowPassFilter", true);
+//
+//		fft_proc = std::make_shared<dsp::FFTPanBlock>(fft_splitter->get_output("lowPassFilter"));
+//		fft_proc->set_fft_settings(32768, final_samplerate, 120);
+//		//fft_proc->avg_num = 10;
+//		//fft_plot->enable_freq_scale;
+//		//fft_plot->bandwidth = final_samplerate;
+//		fft_plot = std::make_shared<widgets::FFTPlot>(fft_proc->output_stream->writeBuf, 32768, -20, 10, 10);
+//
 	}
 
 	AnalysisPsk::~AnalysisPsk()
@@ -122,10 +123,14 @@ namespace analysis
 
 		// Start
 		BaseDemodModule::start();
-		res->start();
+		dsp::RationalResamplerBlock<complex_t> res(nullptr, 2, 1/*d_symbolrate, final_samplerate*/);
+		//dsp::FIRBlock<complex_t> lpf(nullptr, dsp::firdes::low_pass(1.0, final_samplerate * 2, d_cutoff_freq, d_transition_bw));
+		complex_t *work_buffer_in = dsp::create_volk_buffer<complex_t>(d_buffer_size);
+		complex_t *work_buffer_out = dsp::create_volk_buffer<complex_t>(d_buffer_size);
+		//res->start();
 		lpf->start();
-		fft_splitter->start();
-		fft_proc->start();
+		//fft_splitter->start();
+		//fft_proc->start();
 
 		//Buffer
 		complex_t *output_buffer = new complex_t[d_buffer_size * 200];
@@ -162,7 +167,7 @@ namespace analysis
 
 
 
-		//int exponent = 2;
+		int exponent = 2;
 
 		//int16_t *output_wav_buffer = new int16_t[d_buffer_size * 100];
 		int final_data_size = 0;
@@ -180,6 +185,12 @@ namespace analysis
 				lpf->output_stream->flush();
 				continue;
 			}
+
+			int nout = res.process(lpf->output_stream->readBuf, dat_size, work_buffer_in);
+			{
+			volk_32fc_x2_multiply_32fc((lv_32fc_t *)exp_output, (lv_32fc_t *)work_buffer_out, (lv_32fc_t *)work_buffer_in, nout);
+			}
+			//nout = lpf.process(work_buffer_in, nout, work_buffer_out);
 
 
 			//volk_32f_s32f_convert_16i(output_wav_buffer, (float *)lpf->output_stream->readBuf, 65535 * 0.68, dat_size * 2);
@@ -206,9 +217,9 @@ namespace analysis
 
 
 			// Exponentiate
-			//volk_32fc_x2_multiply_32fc((lv_32fc_t *)exp_output, (lv_32fc_t *)fc_buffer, (lv_32fc_t *)fc_buffer, dat_size);
+			//volk_32fc_x2_multiply_32fc((lv_32fc_t *)exp_output, (lv_32fc_t *)lpf->output_stream->readBuf, (lv_32fc_t *)lpf->output_stream->readBuf, dat_size);
 			//for (int i = 2; i < exponent; i++) {
-			//	volk_32fc_x2_multiply_32fc((lv_32fc_t *)exp_output, (lv_32fc_t *)exp_output, (lv_32fc_t *)fc_buffer, dat_size);
+			//	volk_32fc_x2_multiply_32fc((lv_32fc_t *)exp_output, (lv_32fc_t *)exp_output, (lv_32fc_t *)lpf->output_stream->readBuf, dat_size);
 			//}
 
 
@@ -279,7 +290,7 @@ namespace analysis
 
 			if (output_data_type == DATA_FILE)
 			{
-				data_out.write((char *)lpf->output_stream->readBuf, dat_size * sizeof(complex_t));
+				data_out.write((char *)exp_output, dat_size * sizeof(complex_t));
 				//////data_out.write((char *)expTwo_output, dat_size * sizeof(complex_t));
 				//data_out.write((char *)multConj_output, dat_size * sizeof(complex_t));
 				//data_out.write((char *)output_wav_buffer, dat_size * sizeof(int16_t) * 2);
