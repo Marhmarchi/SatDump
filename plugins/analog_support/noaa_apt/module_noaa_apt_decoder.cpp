@@ -29,6 +29,8 @@ namespace noaa_apt
 
         if (parameters.count("autocrop_wedges") > 0)
             d_autocrop_wedges = parameters["autocrop_wedges"].get<bool>();
+        if (parameters.count("save_unsynced") > 0)
+            save_unsynced = parameters["save_unsynced"].get<bool>();
     }
 
     NOAAAPTDecoderModule::~NOAAAPTDecoderModule()
@@ -117,6 +119,33 @@ namespace noaa_apt
             }
 
             data_in = std::ifstream(d_input_file, std::ios::binary);
+        }
+        else
+        {
+            if (d_parameters.contains("frequency"))
+            {
+                uint64_t frequency = d_parameters["frequency"].get<uint64_t>();
+
+                if (abs(frequency - 137.1e6) < 1e4)
+                {
+                    autodetected_sat = 19;
+                    logger->info("Detected NOAA-19");
+                }
+                else if (abs(frequency - 137.9125e6) < 1e4)
+                {
+                    autodetected_sat = 18;
+                    logger->info("Detected NOAA-18");
+                }
+                else if (abs(frequency - 137.62e6) < 1e4)
+                {
+                    autodetected_sat = 15;
+                    logger->info("Detected NOAA-15");
+                }
+                else
+                {
+                    logger->warn("Couldn't automatically determine the satellite, in case of unexpected results, please verify you have specified the correct satellite manually");
+                }
+            }
         }
 
         logger->info("Using input wav " + d_input_file);
@@ -249,6 +278,17 @@ namespace noaa_apt
         // WB
         logger->info("White balance...");
         wip_apt_image.white_balance();
+
+        // Save unsynced
+        if (save_unsynced)
+        {
+            image::Image<uint16_t> wip_apt_image_sized(APT_IMG_WIDTH, line_cnt, 1);
+#pragma omp parallel for
+            for (int line = 0; line < line_cnt - 1; line++)
+                for (int i = 0; i < APT_IMG_WIDTH; i++)
+                    wip_apt_image_sized[line * APT_IMG_WIDTH + i] = wip_apt_image[line * APT_IMG_WIDTH * APT_IMG_OVERS + i * APT_IMG_OVERS];
+            wip_apt_image_sized.save_img(main_dir + "/raw_unsync");
+        }
 
         // Synchronize
         logger->info("Synchronize...");
@@ -526,7 +566,7 @@ namespace noaa_apt
         int last_valid_line = wip_apt_image_sync.height();
 
         // Save RAW before we crop
-        wip_apt_image_sync.save_img(main_dir + "/raw");
+        wip_apt_image_sync.save_img(main_dir + "/raw_sync");
 
         if (d_autocrop_wedges)
         {

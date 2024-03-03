@@ -10,6 +10,7 @@
 #include "core/style.h"
 #include "libs/ctpl/ctpl_stl.h"
 #include "common/widgets/markdown_helper.h"
+#include "common/widgets/timed_message.h"
 
 namespace satdump
 {
@@ -84,11 +85,7 @@ namespace satdump
         std::vector<double> current_timestamps;
         nlohmann::json current_proj_metadata;
 
-        // Projections
-        bool projection_ready = false, should_project = false;
-        image::Image<uint16_t> projected_img;
-
-        bool project_old_algorithm = false;
+        bool projection_use_old_algo = false;
 
         // Utils
         void updateScaleImage();
@@ -108,12 +105,9 @@ namespace satdump
         float drawTreeMenu();
 
         bool canBeProjected();
-        bool hasProjection();
-        bool shouldProject();
-        void updateProjection(int width, int height, nlohmann::json settings, float *progess);
-        image::Image<uint16_t> &getProjection();
-        unsigned int getPreviewImageTexture() { return image_view.getTextID(); }
-        void setShouldProject(bool proj) { should_project = proj; }
+        void addCurrentToProjections();
+
+        widgets::TimedMessage proj_notif;
 
         static std::string getID() { return "image_handler"; }
         static std::shared_ptr<ViewerHandler> getInstance() { return std::make_shared<ImageViewerHandler>(); }

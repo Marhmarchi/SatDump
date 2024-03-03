@@ -68,6 +68,7 @@ if(MSVC)
     target_link_libraries(satdump_core PUBLIC libpng16.dll)
     target_link_libraries(satdump_core PUBLIC fftw3f.dll)
     target_link_libraries(satdump_core PUBLIC nng.dll)
+    target_link_libraries(satdump_core PUBLIC tiff.dll)
 
     if(BUILD_ZIQ)
         target_link_libraries(satdump_core PUBLIC zstd.dll)
@@ -96,6 +97,9 @@ elseif(ANDROID)
     # Libzstd
     target_link_libraries(satdump_core PUBLIC zstd)
     target_compile_definitions(satdump_core PUBLIC BUILD_ZIQ="1")
+
+    # Tiff
+    target_link_libraries(satdump_core PUBLIC tiff)
 
     target_include_directories(satdump_core PUBLIC libs/lua)
 else()
@@ -167,6 +171,10 @@ else()
 
     # Dynamic linking
     target_link_libraries(satdump_core PUBLIC dl)
+
+    # Tiff
+    find_library(TIFF_LIBRARY tiff REQUIRED)
+    target_link_libraries(satdump_core PUBLIC ${TIFF_LIBRARY})
 
     include(CheckCXXSourceCompiles)
 

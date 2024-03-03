@@ -58,6 +58,7 @@ namespace image
         // Copy contents of the image over
         init(img.d_width, img.d_height, img.d_channels);
         memcpy(d_data, img.d_data, img.data_size * sizeof(T));
+        copy_meta(img);
     }
 
     template <typename T>
@@ -74,6 +75,7 @@ namespace image
         // Copy contents of the image over
         init(img.d_width, img.d_height, img.d_channels);
         memcpy(d_data, img.d_data, img.data_size * sizeof(T));
+        copy_meta(img);
         return *this;
     }
 
@@ -98,6 +100,9 @@ namespace image
             font.chars.clear();
             delete[] ttf_buffer;
         }
+
+        if (metadata_obj != nullptr)
+            delete metadata_obj;
     }
 
     template <typename T>
@@ -252,6 +257,8 @@ namespace image
             load_j2k(file);
         else if (signature[0] == 'P' && (signature[1] == '5' || signature[1] == '6'))
             load_pbm(file);
+        else if (signature[0] == 'I' && signature[1] == 'I' && signature[2] == '*')
+            load_tiff(file);
     }
 
     template <typename T>
@@ -277,6 +284,8 @@ namespace image
             save_j2k(file);
         else if ((file.find(".ppm") != std::string::npos) || (file.find(".pgm") != std::string::npos) || (file.find(".pbm") != std::string::npos))
             save_pbm(file);
+        else if ((file.find(".tif") != std::string::npos) || (file.find(".gtif") != std::string::npos) || (file.find(".tiff") != std::string::npos))
+            save_tiff(file);
     }
 
     // Append selected file extension
@@ -290,7 +299,10 @@ namespace image
             file->find(".j2k") != std::string::npos ||
             file->find(".pgm") != std::string::npos ||
             file->find(".pbm") != std::string::npos ||
-            file->find(".ppm") != std::string::npos)
+            file->find(".ppm") != std::string::npos ||
+            file->find(".tif") != std::string::npos ||
+            file->find(".tiff") != std::string::npos ||
+            file->find(".gtif") != std::string::npos)
             return true;
 
         // Otherwise, load the user setting
@@ -305,7 +317,7 @@ namespace image
             return false;
         }
 
-        if (image_format != "png" && image_format != "jpg" && image_format != "j2k" && image_format != "pbm")
+        if (image_format != "png" && image_format != "jpg" && image_format != "j2k" && image_format != "pbm" && image_format != "tif")
         {
             logger->error("Image format not specified, and default format is invalid!");
             return false;
