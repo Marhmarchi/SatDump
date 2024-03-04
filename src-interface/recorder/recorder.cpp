@@ -173,6 +173,49 @@ namespace satdump
                 try_init_tracking_widget();
             }
         }
+
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        eventBus->register_handler<RecorderSetFrequencyEvent>([this](const RecorderSetFrequencyEvent &evt)
+                                                              { set_frequency(evt.frequency); });
+
+        eventBus->register_handler<RecorderStartDeviceEvent>([this](const RecorderStartDeviceEvent &evt)
+                                                             { start(); });
+        eventBus->register_handler<RecorderStopDeviceEvent>([this](const RecorderStopDeviceEvent &evt)
+                                                            { stop(); });
+        eventBus->register_handler<RecorderSetDeviceSamplerateEvent>([this](const RecorderSetDeviceSamplerateEvent &evt)
+                                                                     { source_ptr->set_samplerate(evt.samplerate); });
+        eventBus->register_handler<RecorderSetDeviceDecimationEvent>([this](const RecorderSetDeviceDecimationEvent &evt)
+                                                                     { current_decimation = evt.decimation; });
+        eventBus->register_handler<RecorderSetDeviceLoOffsetEvent>([this](const RecorderSetDeviceLoOffsetEvent &evt)
+                                                                   { xconverter_frequency = evt.offset; });
+
+        eventBus->register_handler<RecorderStartProcessingEvent>([this](const RecorderStartProcessingEvent &evt)
+                                                                 { pipeline_selector.select_pipeline(evt.pipeline_id); start_processing(); });
+        eventBus->register_handler<RecorderStopProcessingEvent>([this](const RecorderStopProcessingEvent &evt)
+                                                                { stop_processing(); });
+
+        eventBus->register_handler<RecorderSetFFTSettingsEvent>([this](const RecorderSetFFTSettingsEvent &evt)
+                                                                {
+                                                                    if (evt.fft_min != -1)
+                                                                        fft_plot->scale_min = waterfall_plot->scale_min = evt.fft_min;
+                                                                    if (evt.fft_max != -1)
+                                                                        fft_plot->scale_max = waterfall_plot->scale_max = evt.fft_max;
+                                                                    if(evt.fft_size != -1 || evt.fft_rate != -1 || evt.waterfall_rate!=-1) 
+                                                                    {
+                                                                        if (evt.fft_size != -1)
+                                                                            fft_size = evt.fft_size;
+                                                                        if (evt.fft_rate != -1)
+                                                                            fft_rate = evt.fft_rate;
+                                                                        if (evt.waterfall_rate != -1)
+                                                                            waterfall_rate = evt.waterfall_rate;
+                                                                        fft->set_fft_settings(fft_size, get_samplerate(), fft_rate);
+                                                                        waterfall_plot->set_rate(fft_rate, waterfall_rate);
+                                                                        waterfall_plot->set_size(fft_size);
+                                                                        fft_plot->set_size(fft_size);
+                                                                        for (int i = 0; i < (int)fft_sizes_lut.size(); i++)
+                                                                            if (fft_sizes_lut[i] == fft_size)
+                                                                                selected_fft_size = i;
+                                                                    } });
     }
 
     RecorderApplication::~RecorderApplication()
@@ -585,6 +628,8 @@ namespace satdump
                         constellation_debug->pushComplex(source_ptr->output_stream->readBuf, 256);
                     constellation_debug->draw();
                 }
+
+                eventBus->fire_event<RecorderDrawPanelEvent>({});
             }
             ImGui::EndChild();
             ImGui::EndGroup();

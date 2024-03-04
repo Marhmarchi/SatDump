@@ -22,7 +22,7 @@ namespace satdump
 {
     namespace reprojection
     {
-        inline void transposePixel(image::Image<uint16_t> &in, image::Image<uint16_t> &out, int ix, int iy, int ox, int oy)
+        inline void transposePixel(image::Image<uint16_t> &in, image::Image<uint16_t> &out, double ix, double iy, int ox, int oy)
         {
             if (ix >= (int)in.width() || iy >= (int)in.height() || ix < 0 || iy < 0)
                 return;
@@ -32,26 +32,26 @@ namespace satdump
             if (in.channels() == 4)
             {
                 for (int c = 0; c < in.channels(); c++)
-                    out.channel(c)[oy * out.width() + ox] = in.channel(c)[iy * in.width() + ix];
+                    out.channel(c)[oy * out.width() + ox] = in.get_pixel_bilinear(c, ix, iy); // in.channel(c)[iy * in.width() + ix];
             }
             else if (in.channels() == 3)
             {
                 for (int c = 0; c < in.channels(); c++)
-                    out.channel(c)[oy * out.width() + ox] = c == 3 ? 65535 : in.channel(c)[iy * in.width() + ix];
+                    out.channel(c)[oy * out.width() + ox] = c == 3 ? 65535 : in.get_pixel_bilinear(c, ix, iy); // in.channel(c)[iy * in.width() + ix];
                 if (out.channels() == 4)
                     out.channel(3)[oy * out.width() + ox] = 65535;
             }
             else if (in.channels() == 1) //|| in.channels() == 2)
             {
                 for (int c = 0; c < out.channels(); c++)
-                    out.channel(c)[oy * out.width() + ox] = in.channel(0)[iy * in.width() + ix];
+                    out.channel(c)[oy * out.width() + ox] = in.get_pixel_bilinear(0, ix, iy); // in.channel(0)[iy * in.width() + ix];
                 if (out.channels() == 4)
                     out.channel(3)[oy * out.width() + ox] = 65535;
             }
             else
             {
                 for (int c = 0; c < in.channels(); c++)
-                    out.channel(c)[oy * out.width() + ox] = c == 3 ? 65535 : in.channel(0)[iy * in.width() + ix];
+                    out.channel(c)[oy * out.width() + ox] = c == 3 ? 65535 : in.get_pixel_bilinear(0, ix, iy); // in.channel(0)[iy * in.width() + ix];
                 if (out.channels() == 4)
                     out.channel(3)[oy * out.width() + ox] = 65535;
             }
