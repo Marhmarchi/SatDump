@@ -42,7 +42,11 @@ namespace analysis
 			std::shared_ptr<dsp::FFTPanBlock> fft_proc;
 			std::shared_ptr<widgets::FFTPlot> fft_plot;
 
-			int exponent = 2;
+			bool settings_changed = false;
+			double upcoming_cutoff_freq = 0;
+			int exponent = 0;
+
+			std::mutex proc_mtx;
 
 
 
@@ -64,12 +68,8 @@ namespace analysis
 			void init();
 			void stop();
 			void process();
-
-			bool enable_freq_scale = true;
 			
 			void drawUI(bool window);
-			//std::vector<ModuleDataType> getInputTypes();
-			//std::vector<ModuleDataType> getOutputTypes();
 
 		public:
 			static std::string getID();

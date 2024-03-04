@@ -50,7 +50,9 @@ namespace analysis
 		show_freq = true;
 		
 		MIN_SPS = 1;
-		MAX_SPS = 1000.0;
+		MAX_SPS = 1e9;
+
+		upcoming_cutoff_freq = d_cutoff_freq;
 
 	}
 
@@ -253,8 +255,6 @@ namespace analysis
 
 
 			}
-			//nout = lpf.process(work_buffer_in, nout, work_buffer_out);
-
 
 			//volk_32f_s32f_convert_16i(output_wav_buffer, (float *)lpf->output_stream->readBuf, 65535 * 0.68, dat_size * 2);
 
@@ -328,17 +328,10 @@ namespace analysis
                         //
 			//// Real to Complex
 			//volk_32f_x2_interleave_32fc((lv_32fc_t *)fc32_mul_n_conj_offset, (float *)f32_mag, (float *)f32_mag, dat_size);
-		
-
-
-
-
-
-
 
 			if (output_data_type == DATA_FILE)
 			{
-				data_out.write((char *)multConj_output, dat_size * sizeof(complex_t));
+				data_out.write((char *)fc32_mul_n_conj, dat_size * sizeof(complex_t));
 				//////data_out.write((char *)expTwo_output, dat_size * sizeof(complex_t));
 				//data_out.write((char *)multConj_output, dat_size * sizeof(complex_t));
 				//data_out.write((char *)output_wav_buffer, dat_size * sizeof(int16_t) * 2);
