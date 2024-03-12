@@ -62,24 +62,14 @@ namespace analysis
 //
 //		int interpol = 2;
 //
-//		logger->critical("Final samplerate BEFORE everything: " + std::to_string(final_samplerate));
-//		logger->critical("Normal samplerate BEFORE everything: " + std::to_string(d_samplerate));
-//
-//
 //		// Resampler
 //		res = std::make_shared<dsp::RationalResamplerBlock<complex_t>>(agc->output_stream, interpol, 1/*d_symbolrate, final_samplerate*/);
 //
 //		//final_samplerate = d_samplerate * interpol;
-//		logger->critical("Final samplerate after res: " + std::to_string(final_samplerate));
-//		logger->critical("Normal input samplerate after res : " + std::to_string(d_samplerate));
 //
 //
 //		// Low pass filter
 		lpf = std::make_shared<dsp::FIRBlock<complex_t>>(agc->output_stream, dsp::firdes::low_pass(1.0, final_samplerate, d_cutoff_freq, d_transition_bw));
-//
-//		logger->critical("Final samplerate after lpf: " + std::to_string(final_samplerate));
-//		logger->critical("Normal input samplerate after lpf : " + std::to_string(d_samplerate));
-//
 //
 //		// Real To Complex
 //		//rtc = std::make_shared<dsp::RealToComplexBlock>(res->output_stream);
@@ -92,11 +82,11 @@ namespace analysis
 		fft_splitter->set_enabled("lowPassFilter", true);
 
 		fft_proc = std::make_shared<dsp::FFTPanBlock>(fft_splitter->get_output("lowPassFilter"));
-		fft_proc->set_fft_settings(32768, final_samplerate, 120);
-		//fft_proc->avg_num = 10;
+		fft_proc->set_fft_settings(65536, final_samplerate, 120);
+		fft_proc->avg_num = 10;
 		//fft_plot->enable_freq_scale;
-		//fft_plot->bandwidth = final_samplerate;
-		fft_plot = std::make_shared<widgets::FFTPlot>(fft_proc->output_stream->writeBuf, 32768, -20, 10, 10);
+		fft_plot->bandwidth = final_samplerate;
+		fft_plot = std::make_shared<widgets::FFTPlot>(fft_proc->output_stream->writeBuf, 65536, -20, 10, 10);
 
 	}
 
@@ -211,7 +201,7 @@ namespace analysis
 				// Multiply conjugate
 				volk_32fc_x2_multiply_conjugate_32fc((lv_32fc_t *)fc32_mul_n_conj, (lv_32fc_t *)fc32_not_delayed, (lv_32fc_t *)delayed_output, nout);
 				// Complex to Mag
-				//volk_32fc_magnitude_32f((float *)compMag_output, (lv_32fc_t *)multConj_output, nout);
+				volk_32fc_magnitude_32f((float *)compMag_output, (lv_32fc_t *)multConj_output, nout);
 
 				//// Real to Complex
 				//volk_32f_x2_interleave_32fc((lv_32fc_t *)multConj_output, (float *)compMag_output, (float *)compMag_output, nout);
@@ -248,7 +238,7 @@ namespace analysis
 				// Multiply conjugate
 				volk_32fc_x2_multiply_conjugate_32fc((lv_32fc_t *)multConj_output, (lv_32fc_t *)not_delayed_output, (lv_32fc_t *)delayed_output, nout);
 				// Complex to Mag
-				//volk_32fc_magnitude_32f((float *)compMag_output, (lv_32fc_t *)multConj_output, nout);
+				volk_32fc_magnitude_32f((float *)compMag_output, (lv_32fc_t *)multConj_output, nout);
 
 				//// Real to Complex
 				//volk_32f_x2_interleave_32fc((lv_32fc_t *)multConj_output, (float *)compMag_output, (float *)compMag_output, nout);
@@ -494,17 +484,6 @@ namespace analysis
 				const char* expon_numbers[expo_COUNT] = { "2", "4", "8", "16", "32", "64" };
 				const char* expo_number = (expo >= 0 && expo < expo_COUNT) ? expon_numbers[expo] : "Unkown Exponent";
 				ImGui::SliderInt("Exponent number", &expo, 0, expo_COUNT - 1, expo_number);
-
-				//val = std::make_shared<int>(atoi(expo_number));
-
-				//int exponent = atoi(expo_number);
-
-				//std::stringstream expo_string;
-				//expo_string << expo_number;
-
-				//int expo_value;
-				//expo_string >> expo_value;
-
 
 				ImGui::EndGroup();
 				ImGui::EndTabItem();
