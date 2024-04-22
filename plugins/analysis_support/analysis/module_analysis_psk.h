@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common/dsp/filter/fft_filter.h"
 #include "common/dsp/io/file_sink.h"
 #include "common/dsp/resamp/smart_resampler.h"
 #include "common/dsp/utils/complex_to_mag.h"
@@ -33,10 +34,13 @@ namespace analysis
 			std::shared_ptr<dsp::FIRBlock<complex_t>> lpf;
 			std::shared_ptr<dsp::RealToComplexBlock> rtc;
 			std::shared_ptr<dsp::ComplexToMagBlock> ctm;
+			std::shared_ptr<dsp::FFTFilterBlock<complex_t>> fftf;
 			//std::shared_ptr<dsp::AGC2Block<complex_t>> agc2;
 
 			std::ifstream data_in;
 			std::ofstream data_out;
+
+
 
 			std::shared_ptr<dsp::SplitterBlock> fft_splitter;
 			std::shared_ptr<dsp::FFTPanBlock> fft_proc;

@@ -1,6 +1,7 @@
 #include "module_analysis_psk.h"
 #include "common/dsp/buffer.h"
 #include "common/dsp/fft/fft_pan.h"
+#include "common/dsp/filter/fft_filter.h"
 #include "common/dsp/io/wav_writer.h"
 #include "common/dsp/path/splitter.h"
 #include "common/dsp/utils/real_to_complex.h"
@@ -60,16 +61,19 @@ namespace analysis
 	{
 		BaseDemodModule::initb();
 //
-//		int interpol = 2;
+		//int interpol = 2;
 //
 //		// Resampler
-//		res = std::make_shared<dsp::RationalResamplerBlock<complex_t>>(agc->output_stream, interpol, 1/*d_symbolrate, final_samplerate*/);
+//		res = std::make_shared<dsp::RationalResamplerBlock<complex_t>>(agc->output_stream, interpol, 2/*d_symbolrate, final_samplerate*/);
 //
-//		//final_samplerate = d_samplerate * interpol;
+		//final_samplerate = d_samplerate * interpol;
 //
 //
 //		// Low pass filter
 		lpf = std::make_shared<dsp::FIRBlock<complex_t>>(agc->output_stream, dsp::firdes::low_pass(1.0, final_samplerate, d_cutoff_freq, d_transition_bw));
+
+		// FFT Filter
+//		fftf = std::make_shared<dsp::FFTFilterBlock<complex_t>>(nullptr, 31);
 //
 //		// Real To Complex
 //		//rtc = std::make_shared<dsp::RealToComplexBlock>(res->output_stream);
@@ -85,7 +89,7 @@ namespace analysis
 		fft_proc->set_fft_settings(65536, final_samplerate, 120);
 		fft_proc->avg_num = 10;
 		//fft_plot->enable_freq_scale;
-		fft_plot->bandwidth = final_samplerate;
+		//fft_plot->bandwidth = final_samplerate;
 		fft_plot = std::make_shared<widgets::FFTPlot>(fft_proc->output_stream->writeBuf, 65536, -20, 10, 10);
 
 	}
@@ -179,6 +183,8 @@ namespace analysis
 				continue;
 			}
 
+			proc_mtx.lock();
+
 			int nout = res.process(lpf->output_stream->readBuf, dat_size, work_buffer_in);
 			{
 				// Exponentiate
@@ -245,6 +251,8 @@ namespace analysis
 
 
 			}
+
+			proc_mtx.unlock();
 
 			//volk_32f_s32f_convert_16i(output_wav_buffer, (float *)lpf->output_stream->readBuf, 65535 * 0.68, dat_size * 2);
 
