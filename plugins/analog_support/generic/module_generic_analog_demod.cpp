@@ -1,9 +1,14 @@
 #include "module_generic_analog_demod.h"
+#include "common/dsp/block.h"
 #include "common/dsp/filter/firdes.h"
+#include "common/dsp/utils/complex_to_mag.h"
 #include "core/config.h"
 #include "logger.h"
 #include "imgui/imgui.h"
+#include <armadillo>
+#include <memory>
 #include <volk/volk.h>
+#include <volk/volk_complex.h>
 #include "common/dsp/io/wav_writer.h"
 #include "common/audio/audio_sink.h"
 
@@ -83,6 +88,7 @@ namespace generic_analog
         /////////////
         dsp::RationalResamplerBlock<complex_t> input_resamp(nullptr, d_symbolrate, final_samplerate);
         dsp::QuadratureDemodBlock quad_demod(nullptr, dsp::hz_to_rad(d_symbolrate / 2, d_symbolrate));
+	//dsp::ComplexToMagBlock ctm(nullptr);
         complex_t *work_buffer_complex = dsp::create_volk_buffer<complex_t>(d_buffer_size);
         float *work_buffer_float = dsp::create_volk_buffer<float>(d_buffer_size);
 
@@ -100,6 +106,7 @@ namespace generic_analog
 #if 1
             proc_mtx.lock();
 
+
             if (settings_changed)
             {
                 if (upcoming_symbolrate > 0)
@@ -111,8 +118,20 @@ namespace generic_analog
                 settings_changed = false;
             }
 
-            int nout = input_resamp.process(agc->output_stream->readBuf, dat_size, work_buffer_complex);
-            nout = quad_demod.process(work_buffer_complex, nout, work_buffer_float);
+	    int nout = input_resamp.process(agc->output_stream->readBuf, dat_size, work_buffer_complex);
+
+	    if (nfm_demod)
+	    {
+		    nout = quad_demod.process(work_buffer_complex, nout, work_buffer_float);
+	    }
+
+	    if (am_demod)
+	    {
+		    volk_32fc_magnitude_32f((float *)work_buffer_float, (lv_32fc_t *)work_buffer_complex, nout);
+
+	    }
+
+
 
             {
                 // Into const
@@ -229,19 +248,26 @@ namespace generic_analog
             ImGui::SetNextItemWidth(200 * ui_scale);
             ImGui::InputInt("Bandwidth##bandwidthsetting", &upcoming_symbolrate);
 
-            ImGui::RadioButton("NFM##analogoption", true);
+	    static int e = 5;
+            if (ImGui::RadioButton("NFM###analogoption", &e, 0))
+		    nfm_demod = true;
+	    proc_mtx.unlock();
+
             ImGui::SameLine();
-            style::beginDisabled();
-            ImGui::RadioButton("WFM##analogoption", false);
+            //style::beginDisabled();
+            ImGui::RadioButton("WFM##analogoption", &e, 1);
             // ImGui::SameLine();
-            ImGui::RadioButton("USB##analogoption", false);
+            ImGui::RadioButton("USB##analogoption", &e, 2);
             ImGui::SameLine();
-            ImGui::RadioButton("LSB##analogoption", false);
+            ImGui::RadioButton("LSB##analogoption", &e, 3);
             // ImGui::SameLine();
-            ImGui::RadioButton("AM##analogoption", false);
+            if (ImGui::RadioButton("AM##analogoption", &e, 5))
+		    am_demod = true;
+	    proc_mtx.unlock();
+
             ImGui::SameLine();
-            ImGui::RadioButton("CW##analogoption", false);
-            style::endDisabled();
+            ImGui::RadioButton("CW##analogoption", &e, 5);
+            //style::endDisabled();
 
             if (ImGui::Button("Set###analogset"))
                 settings_changed = true;
