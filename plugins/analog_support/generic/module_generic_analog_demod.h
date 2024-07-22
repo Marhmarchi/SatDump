@@ -2,6 +2,7 @@
 
 #include "modules/demod/module_demod_base.h"
 #include "common/dsp/demod/quadrature_demod.h"
+#include "common/dsp/utils/complex_to_mag.h"
 
 namespace generic_analog
 {
@@ -10,7 +11,10 @@ namespace generic_analog
     protected:
         std::shared_ptr<dsp::RationalResamplerBlock<complex_t>> res;
         std::shared_ptr<dsp::QuadratureDemodBlock> qua;
+	std::shared_ptr<dsp::ComplexToMagBlock> ctm;
 
+	bool nfm_demod = false; // Sets NFM as default demod
+	bool am_demod = true;
         bool settings_changed = false;
         int upcoming_symbolrate = 0;
 
