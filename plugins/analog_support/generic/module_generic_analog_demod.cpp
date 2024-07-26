@@ -2,10 +2,13 @@
 #include "common/dsp/block.h"
 #include "common/dsp/filter/firdes.h"
 #include "common/dsp/utils/complex_to_mag.h"
+#include "common/dsp/utils/freq_shift.h"
 #include "core/config.h"
 #include "logger.h"
 #include "imgui/imgui.h"
 #include <armadillo>
+#include <cmath>
+#include <complex.h>
 #include <memory>
 #include <volk/volk.h>
 #include <volk/volk_complex.h>
@@ -88,9 +91,15 @@ namespace generic_analog
         /////////////
         dsp::RationalResamplerBlock<complex_t> input_resamp(nullptr, d_symbolrate, final_samplerate);
         dsp::QuadratureDemodBlock quad_demod(nullptr, dsp::hz_to_rad(d_symbolrate / 2, d_symbolrate));
+	//dsp::FreqShiftBlock fsb(nullptr, final_samplerate, d_symbolrate / 2);
 	//dsp::ComplexToMagBlock ctm(nullptr);
         complex_t *work_buffer_complex = dsp::create_volk_buffer<complex_t>(d_buffer_size);
+        complex_t *work_buffer_complex_2 = dsp::create_volk_buffer<complex_t>(d_buffer_size);
         float *work_buffer_float = dsp::create_volk_buffer<float>(d_buffer_size);
+        float *work_buffer_float_2 = dsp::create_volk_buffer<float>(d_buffer_size);
+        float *work_buffer_float_cos = dsp::create_volk_buffer<float>(d_buffer_size);
+        float *work_buffer_float_sin = dsp::create_volk_buffer<float>(d_buffer_size);
+        float *work_buffer_float_ssb = dsp::create_volk_buffer<float>(d_buffer_size);
 
         int dat_size = 0;
         while (demod_should_run())
@@ -114,6 +123,12 @@ namespace generic_analog
                     d_symbolrate = upcoming_symbolrate;
                     input_resamp.set_ratio(d_symbolrate, final_samplerate);
                     quad_demod.set_gain(dsp::hz_to_rad(d_symbolrate / 2, d_symbolrate));
+
+		    phase = complex_t(1, 0);
+		    //phase_inverted = complex_t(0, 1);
+		    phase_delta = complex_t(cos(dsp::hz_to_rad(d_symbolrate / 2, final_samplerate)), sin(dsp::hz_to_rad(d_symbolrate / 2, final_samplerate)));
+		    //fsb.set_freq(final_samplerate, d_symbolrate / 2);
+
                 }
                 settings_changed = false;
             }
@@ -128,6 +143,32 @@ namespace generic_analog
 	    if (am_demod)
 	    {
 		    volk_32fc_magnitude_32f((float *)work_buffer_float, (lv_32fc_t *)work_buffer_complex, nout);
+
+	    }
+
+	    if (usb_demod)
+	    {
+		    volk_32fc_deinterleave_32f_x2((float *)work_buffer_float, (float *)work_buffer_float_2, (lv_32fc_t *)work_buffer_complex_2, nout);
+		    phase_inverted = float_t(sin(d_symbolrate));
+
+	    }
+
+	    if (lsb_demod)
+	    {
+		    volk_32fc_s32fc_x2_rotator2_32fc((lv_32fc_t *)work_buffer_complex_2, (lv_32fc_t *)work_buffer_complex, (lv_32fc_t *)&phase_delta, (lv_32fc_t *)&phase, nout);
+
+		    volk_32fc_deinterleave_real_32f((float *)work_buffer_float, (lv_32fc_t *)work_buffer_complex_2, nout);
+
+	    }
+
+
+
+	    if (dsb_demod) // Not sure, but pretty much sure this is DSB
+	    {
+		    volk_32fc_s32fc_x2_rotator2_32fc((lv_32fc_t *)work_buffer_complex_2, (lv_32fc_t *)work_buffer_complex, (lv_32fc_t *)&phase_delta, (lv_32fc_t *)&phase, nout);
+
+		    //volk_32fc_deinterleave_real_32f((float *)work_buffer_float, (lv_32fc_t *)work_buffer_complex_2, nout);
+		    volk_32fc_deinterleave_32f_x2((float *)work_buffer_float, (float *)work_buffer_float_2, (lv_32fc_t *)work_buffer_complex_2, nout);
 
 	    }
 
@@ -248,19 +289,27 @@ namespace generic_analog
             ImGui::SetNextItemWidth(200 * ui_scale);
             ImGui::InputInt("Bandwidth##bandwidthsetting", &upcoming_symbolrate);
 
-	    static int e = 5;
+	    static int e = 3;
             if (ImGui::RadioButton("NFM###analogoption", &e, 0))
 		    nfm_demod = true;
 	    proc_mtx.unlock();
 
             ImGui::SameLine();
             //style::beginDisabled();
+
             ImGui::RadioButton("WFM##analogoption", &e, 1);
             // ImGui::SameLine();
-            ImGui::RadioButton("USB##analogoption", &e, 2);
+
+            if (ImGui::RadioButton("USB##analogoption", &e, 2))
+		    usb_demod = true;
+	    proc_mtx.unlock();
+
             ImGui::SameLine();
-            ImGui::RadioButton("LSB##analogoption", &e, 3);
+            if (ImGui::RadioButton("LSB##analogoption", &e, 3))
+		    lsb_demod = true;
+	    proc_mtx.unlock();
             // ImGui::SameLine();
+
             if (ImGui::RadioButton("AM##analogoption", &e, 5))
 		    am_demod = true;
 	    proc_mtx.unlock();
