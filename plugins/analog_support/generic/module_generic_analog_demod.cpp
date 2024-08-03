@@ -77,7 +77,7 @@ namespace generic_analog
         uint64_t final_data_size = 0;
         dsp::WavWriter wave_writer(data_out);
         if (output_data_type == DATA_FILE)
-            wave_writer.write_header(audio_samplerate, 2);
+            wave_writer.write_header(audio_samplerate, 1);
 
         std::shared_ptr<audio::AudioSink> audio_sink;
         if (input_data_type != DATA_FILE && audio::has_sink())
@@ -95,11 +95,11 @@ namespace generic_analog
 	//dsp::ComplexToMagBlock ctm(nullptr);
         complex_t *work_buffer_complex = dsp::create_volk_buffer<complex_t>(d_buffer_size);
         complex_t *work_buffer_complex_2 = dsp::create_volk_buffer<complex_t>(d_buffer_size);
-        float *work_buffer_float = dsp::create_volk_buffer<float>(d_buffer_size * 2);
-        float *work_buffer_float_2 = dsp::create_volk_buffer<float>(d_buffer_size * 2);
+        float *work_buffer_float = dsp::create_volk_buffer<float>(d_buffer_size);
+        float *work_buffer_float_2 = dsp::create_volk_buffer<float>(d_buffer_size);
         float *work_buffer_float_cos = dsp::create_volk_buffer<float>(d_buffer_size);
         float *work_buffer_float_sin = dsp::create_volk_buffer<float>(d_buffer_size);
-        float *work_buffer_float_ssb = dsp::create_volk_buffer<float>(d_buffer_size * 2);
+        float *work_buffer_float_ssb = dsp::create_volk_buffer<float>(d_buffer_size);
 
         int dat_size = 0;
         while (demod_should_run())
@@ -141,6 +141,13 @@ namespace generic_analog
 		    logger->info("NFM demod");
 	    }
 
+	    if (wfm_demod)
+	    {
+		    // Quad demod
+		    nout = quad_demod.process(work_buffer_complex, nout, work_buffer_float);
+
+	    }
+
 	    if (am_demod)
 	    {
 		    volk_32fc_magnitude_32f((float *)work_buffer_float, (lv_32fc_t *)work_buffer_complex, nout);
@@ -164,8 +171,11 @@ namespace generic_analog
 	    {
 		    volk_32fc_s32fc_x2_rotator2_32fc((lv_32fc_t *)work_buffer_complex_2, (lv_32fc_t *)work_buffer_complex, (lv_32fc_t *)&phase_delta, (lv_32fc_t *)&phase, nout);
 
-		    volk_32fc_deinterleave_real_32f((float *)work_buffer_float, (lv_32fc_t *)work_buffer_complex_2, nout);
+		    volk_32fc_deinterleave_32f_x2((float *)work_buffer_float_ssb, (float *)work_buffer_float_2, (lv_32fc_t *)work_buffer_complex_2, nout);
 
+		    //volk_32fc_deinterleave_real_32f((float *)work_buffer_float, (lv_32fc_t *)work_buffer_complex_2, nout);
+		    volk_32f_x2_subtract_32f((float *)work_buffer_float, (float *)work_buffer_float_ssb, (float *)work_buffer_float_2, nout);
+		    
 		    logger->info("LSB demod");
 	    }
 
@@ -195,19 +205,19 @@ namespace generic_analog
                         work_buffer_float[i] = -1.0f;
                 }
 
-                volk_32f_s32f_convert_16i(output_wav_buffer, (float *)work_buffer_float, 65535 * 0.68, nout * 2);
+                volk_32f_s32f_convert_16i(output_wav_buffer, (float *)work_buffer_float, 65535 * 0.68, nout);
 
-                int final_out = audio::AudioSink::resample_s16(output_wav_buffer, output_wav_buffer_resamp, d_symbolrate, audio_samplerate, nout, 2);
+                int final_out = audio::AudioSink::resample_s16(output_wav_buffer, output_wav_buffer_resamp, d_symbolrate, audio_samplerate, nout, 1);
                 if (enable_audio && play_audio)
                     audio_sink->push_samples(output_wav_buffer_resamp, final_out);
                 if (output_data_type == DATA_FILE)
                 {
-                    data_out.write((char *)output_wav_buffer_resamp, final_out * sizeof(int16_t) * 2);
-                    final_data_size += final_out * sizeof(int16_t) * 2;
+                    data_out.write((char *)output_wav_buffer_resamp, final_out * sizeof(int16_t));
+                    final_data_size += final_out * sizeof(int16_t);
                 }
                 else
                 {
-                    output_fifo->write((uint8_t *)output_wav_buffer_resamp, final_out * sizeof(int16_t) * 2);
+                    output_fifo->write((uint8_t *)output_wav_buffer_resamp, final_out * sizeof(int16_t));
                 }
             }
 
