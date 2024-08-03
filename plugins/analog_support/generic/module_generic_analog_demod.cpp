@@ -146,6 +146,9 @@ namespace generic_analog
 		    // Quad demod
 		    nout = quad_demod.process(work_buffer_complex, nout, work_buffer_float);
 
+		    // Pilot
+		    
+
 	    }
 
 	    if (am_demod)
