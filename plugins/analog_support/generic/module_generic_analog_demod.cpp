@@ -306,25 +306,30 @@ namespace generic_analog
             ImGui::SameLine();
             //style::beginDisabled();
 
-            ImGui::RadioButton("WFM##analogoption", &e, 1);
+            if (ImGui::RadioButton("WFM##analogoption", &e, 1))
+		    wfm_demod = true;
+	    proc_mtx.unlock();
             // ImGui::SameLine();
 
-            ImGui::RadioButton("USB##analogoption", &e, 2);
-//		    usb_demod = true;
-//	    proc_mtx.unlock();
+            if (ImGui::RadioButton("USB##analogoption", &e, 2))
+		    usb_demod = true;
+	    proc_mtx.unlock();
 
             ImGui::SameLine();
-            ImGui::RadioButton("LSB##analogoption", &e, 3);
-//		    lsb_demod = true;
-//	    proc_mtx.unlock();
+            if (ImGui::RadioButton("LSB##analogoption", &e, 3))
+		    lsb_demod = true;
+	    proc_mtx.unlock();
             // ImGui::SameLine();
 
-            ImGui::RadioButton("AM##analogoption", &e, 5);
-//		    am_demod = true;
-//	    proc_mtx.unlock();
+            if (ImGui::RadioButton("AM##analogoption", &e, 5))
+		    am_demod = true;
+	    proc_mtx.unlock();
 
             ImGui::SameLine();
-            ImGui::RadioButton("CW##analogoption", &e, 5);
+            if (ImGui::RadioButton("CW##analogoption", &e, 5))
+		    cw_demod = true;
+	    proc_mtx.unlock();
+
             //style::endDisabled();
 
             if (ImGui::Button("Set###analogset"))
