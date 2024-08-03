@@ -138,19 +138,26 @@ namespace generic_analog
 	    if (nfm_demod)
 	    {
 		    nout = quad_demod.process(work_buffer_complex, nout, work_buffer_float);
+		    logger->info("NFM demod");
 	    }
 
 	    if (am_demod)
 	    {
 		    volk_32fc_magnitude_32f((float *)work_buffer_float, (lv_32fc_t *)work_buffer_complex, nout);
 
+		    logger->info("AM demod");
 	    }
 
 	    if (usb_demod)
 	    {
-		    volk_32fc_deinterleave_32f_x2((float *)work_buffer_float, (float *)work_buffer_float_2, (lv_32fc_t *)work_buffer_complex_2, nout);
-		    phase_inverted = float_t(sin(d_symbolrate));
+		    volk_32fc_s32fc_x2_rotator2_32fc((lv_32fc_t *)work_buffer_complex_2, (lv_32fc_t *)work_buffer_complex, (lv_32fc_t *)&phase_delta, (lv_32fc_t *)&phase, nout);
 
+		    volk_32fc_deinterleave_32f_x2((float *)work_buffer_float_ssb, (float *)work_buffer_float_2, (lv_32fc_t *)work_buffer_complex_2, nout);
+		    
+		    //phase_inverted = float_t(sin(d_symbolrate));
+
+		    volk_32f_x2_add_32f((float *)work_buffer_float, (float *)work_buffer_float_ssb, (float *)work_buffer_float_2, nout);
+		    //logger->info("USB demod");
 	    }
 
 	    if (lsb_demod)
@@ -159,6 +166,7 @@ namespace generic_analog
 
 		    volk_32fc_deinterleave_real_32f((float *)work_buffer_float, (lv_32fc_t *)work_buffer_complex_2, nout);
 
+		    logger->info("LSB demod");
 	    }
 
 
@@ -170,6 +178,7 @@ namespace generic_analog
 		    //volk_32fc_deinterleave_real_32f((float *)work_buffer_float, (lv_32fc_t *)work_buffer_complex_2, nout);
 		    volk_32fc_deinterleave_32f_x2((float *)work_buffer_float, (float *)work_buffer_float_2, (lv_32fc_t *)work_buffer_complex_2, nout);
 
+		    logger->info("DSB demod");
 	    }
 
 
@@ -300,19 +309,19 @@ namespace generic_analog
             ImGui::RadioButton("WFM##analogoption", &e, 1);
             // ImGui::SameLine();
 
-            if (ImGui::RadioButton("USB##analogoption", &e, 2))
-		    usb_demod = true;
-	    proc_mtx.unlock();
+            ImGui::RadioButton("USB##analogoption", &e, 2);
+//		    usb_demod = true;
+//	    proc_mtx.unlock();
 
             ImGui::SameLine();
-            if (ImGui::RadioButton("LSB##analogoption", &e, 3))
-		    lsb_demod = true;
-	    proc_mtx.unlock();
+            ImGui::RadioButton("LSB##analogoption", &e, 3);
+//		    lsb_demod = true;
+//	    proc_mtx.unlock();
             // ImGui::SameLine();
 
-            if (ImGui::RadioButton("AM##analogoption", &e, 5))
-		    am_demod = true;
-	    proc_mtx.unlock();
+            ImGui::RadioButton("AM##analogoption", &e, 5);
+//		    am_demod = true;
+//	    proc_mtx.unlock();
 
             ImGui::SameLine();
             ImGui::RadioButton("CW##analogoption", &e, 5);

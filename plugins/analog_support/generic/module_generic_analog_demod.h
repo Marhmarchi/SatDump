@@ -18,8 +18,8 @@ namespace generic_analog
 
 
 	bool nfm_demod = false; // Sets NFM as default demod
-	bool am_demod = true;
-	bool usb_demod = false;
+	bool am_demod = false;
+	bool usb_demod = true;
 	bool lsb_demod = false;
 	bool dsb_demod = false;
         bool settings_changed = false;
