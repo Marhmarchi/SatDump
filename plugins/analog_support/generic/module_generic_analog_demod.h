@@ -23,7 +23,7 @@ namespace generic_analog
 	bool cw_demod = false;
 	bool usb_demod = true;
 	bool lsb_demod = false;
-	//bool dsb_demod = false;
+	bool dsb_demod = false;
         bool settings_changed = false;
         int upcoming_symbolrate = 0;
 
