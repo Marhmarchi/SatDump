@@ -14,4 +14,3 @@ resources/gk2a/EncryptionKeyMessage.bin
 vcpkg/
 srv/
 .env
-.cache
