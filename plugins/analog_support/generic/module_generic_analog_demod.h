@@ -1,9 +1,10 @@
 #pragma once
 
-#include "common/dsp/utils/freq_shift.h"
+//#include "common/dsp/utils/freq_shift.h"
+#include "common/dsp/utils/agc2.h"
 #include "modules/demod/module_demod_base.h"
 #include "common/dsp/demod/quadrature_demod.h"
-#include "common/dsp/utils/complex_to_mag.h"
+#include <complex.h>
 #include <memory>
 
 namespace generic_analog
@@ -13,19 +14,23 @@ namespace generic_analog
     protected:
         std::shared_ptr<dsp::RationalResamplerBlock<complex_t>> res;
         std::shared_ptr<dsp::QuadratureDemodBlock> qua;
+	std::shared_ptr<dsp::AGC2Block<complex_t>> demod_agc;
 	//std::shared_ptr<dsp::ComplexToMagBlock> ctm;
-	std::shared_ptr<dsp::FreqShiftBlock> fsb;
+	//std::shared_ptr<dsp::FreqShiftBlock> fsb;
 
 
 	bool nfm_demod = false; // Sets NFM as default demod
-	bool wfm_demod = true;
-	bool am_demod = false;
-	bool cw_demod = false;
+	bool wfm_demod = false;
 	bool usb_demod = false;
 	bool lsb_demod = false;
 	bool dsb_demod = false;
-        bool settings_changed = false;
-        int upcoming_symbolrate = 0;
+	bool am_demod = false;
+	bool cw_demod = false;
+	
+
+	int e = 0;
+	bool settings_changed = false;
+	int upcoming_symbolrate = 0;
 
 	complex_t phase_delta, phase, phase_inverted;
 	//int ssb_freq = 2400;
